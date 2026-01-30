@@ -1,63 +1,58 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Ticket, TicketFormData, TicketStatus } from '@/types/ticket'
+import type { Solicitacao, SolicitacaoFormData, SolicitacaoStatus } from '@/types/solicitacao'
 import type { Company } from '@/types/company'
 import FileUpload from './FileUpload'
 
-type TicketFormProps = {
-  ticket?: Ticket
+type SolicitacaoFormProps = {
+  solicitacao?: Solicitacao
   companies: Company[]
-  onSubmit: (data: TicketFormData) => void
+  onSubmit: (data: SolicitacaoFormData) => void
   onCancel: () => void
 }
 
-export default function TicketForm({ ticket, companies, onSubmit, onCancel }: TicketFormProps) {
-  const isEditing = !!ticket
+export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCancel }: SolicitacaoFormProps) {
+  const isEditing = !!solicitacao
 
   const firstCompany = companies[0]
 
-  const [formData, setFormData] = useState<TicketFormData>({
-    // ID automático quando criando, mantido quando editando
-    numero: ticket?.numero || Date.now().toString(),
-    // Razão Social
-    titulo: ticket?.titulo || firstCompany?.nome || '',
-    // CNPJ
-    origem: ticket?.origem || firstCompany?.cnpjs?.[0] || '',
-    // Mantém campos não usados na UI com valores padrão
-    prioridade: ticket?.prioridade || 'media',
-    status: ticket?.status || 'aberto',
-    estagio: ticket?.estagio || 'Pendente',
-    descricao: ticket?.descricao || '',
-    boleto: ticket?.boleto || undefined,
-    notaFiscal: ticket?.notaFiscal || undefined,
+  const [formData, setFormData] = useState<SolicitacaoFormData>({
+    numero: solicitacao?.numero || Date.now().toString(),
+    titulo: solicitacao?.titulo || firstCompany?.nome || '',
+    origem: solicitacao?.origem || firstCompany?.cnpjs?.[0] || '',
+    prioridade: solicitacao?.prioridade || 'media',
+    status: solicitacao?.status || 'aberto',
+    estagio: solicitacao?.estagio || 'Pendente',
+    descricao: solicitacao?.descricao || '',
+    boleto: solicitacao?.boleto || undefined,
+    notaFiscal: solicitacao?.notaFiscal || undefined,
   })
 
   const [boletoFile, setBoletoFile] = useState<File | null>(null)
   const [notaFiscalFile, setNotaFiscalFile] = useState<File | null>(null)
 
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(
-    () => companies.find((c) => c.nome === ticket?.titulo)?.id || firstCompany?.id || ''
+    () => companies.find((c) => c.nome === solicitacao?.titulo)?.id || firstCompany?.id || ''
   )
 
   const currentCompany = companies.find((c) => c.id === selectedCompanyId) || firstCompany
 
-  const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData, string>>>({})
+  const [errors, setErrors] = useState<Partial<Record<keyof SolicitacaoFormData, string>>>({})
 
   useEffect(() => {
-    if (ticket) {
+    if (solicitacao) {
       setFormData({
-        numero: ticket.numero,
-        titulo: ticket.titulo,
-        origem: ticket.origem,
-        prioridade: ticket.prioridade,
-        status: ticket.status,
-        estagio: ticket.estagio,
-        descricao: ticket.descricao || '',
+        numero: solicitacao.numero,
+        titulo: solicitacao.titulo,
+        origem: solicitacao.origem,
+        prioridade: solicitacao.prioridade,
+        status: solicitacao.status,
+        estagio: solicitacao.estagio,
+        descricao: solicitacao.descricao || '',
       })
-      setSelectedCompanyId(companies.find((c) => c.nome === ticket.titulo)?.id || firstCompany?.id || '')
+      setSelectedCompanyId(companies.find((c) => c.nome === solicitacao.titulo)?.id || firstCompany?.id || '')
     } else {
-      // Novo ticket: garante um ID/numero automático e preenche com primeira empresa/CNPJ
       setFormData((prev) => ({
         ...prev,
         numero: Date.now().toString(),
@@ -66,10 +61,10 @@ export default function TicketForm({ ticket, companies, onSubmit, onCancel }: Ti
       }))
       setSelectedCompanyId(firstCompany?.id || '')
     }
-  }, [ticket, companies])
+  }, [solicitacao, companies])
 
   const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof TicketFormData, string>> = {}
+    const newErrors: Partial<Record<keyof SolicitacaoFormData, string>> = {}
 
     if (!formData.titulo.trim()) {
       newErrors.titulo = 'Razão Social é obrigatória'
@@ -77,7 +72,6 @@ export default function TicketForm({ ticket, companies, onSubmit, onCancel }: Ti
     if (!formData.origem.trim()) {
       newErrors.origem = 'CNPJ é obrigatório'
     }
-    // Arquivos são obrigatórios apenas ao criar novo ticket
     if (!isEditing) {
       if (!boletoFile) {
         newErrors.boleto = 'Boleto é obrigatório'
@@ -102,7 +96,7 @@ export default function TicketForm({ ticket, companies, onSubmit, onCancel }: Ti
     }
   }
 
-  const handleChange = (field: keyof TicketFormData, value: string) => {
+  const handleChange = (field: keyof SolicitacaoFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }))
@@ -111,7 +105,6 @@ export default function TicketForm({ ticket, companies, onSubmit, onCancel }: Ti
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Empresa e CNPJ (baseados no cadastro de empresas) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="empresa" className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -178,11 +171,9 @@ export default function TicketForm({ ticket, companies, onSubmit, onCancel }: Ti
         {errors.numero && <p className="mt-1 text-xs text-red-600">{errors.numero}</p>}
       </div>
 
-      {/* Campos derivados, apenas para validação/consistência (ocultos visualmente) */}
       <input type="hidden" value={formData.titulo} readOnly />
       <input type="hidden" value={formData.origem} readOnly />
 
-      {/* Campo de upload - Boleto */}
       <FileUpload
         label="Enviar Boleto"
         accept=".pdf,.jpg,.jpeg,.png"
@@ -197,7 +188,6 @@ export default function TicketForm({ ticket, companies, onSubmit, onCancel }: Ti
         }}
       />
 
-      {/* Campo de upload - Nota Fiscal */}
       <FileUpload
         label="Enviar Nota Fiscal"
         accept=".pdf,.xml,.jpg,.jpeg,.png"
@@ -219,7 +209,7 @@ export default function TicketForm({ ticket, companies, onSubmit, onCancel }: Ti
         <select
           id="status"
           value={formData.status}
-          onChange={(e) => handleChange('status', e.target.value as TicketStatus)}
+          onChange={(e) => handleChange('status', e.target.value as SolicitacaoStatus)}
           className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]/40"
         >
           <option value="aberto">Aberto</option>
@@ -234,7 +224,7 @@ export default function TicketForm({ ticket, companies, onSubmit, onCancel }: Ti
           type="submit"
           className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-[var(--accent)] transition"
         >
-          {ticket ? 'Salvar alterações' : 'Criar ticket'}
+          {solicitacao ? 'Salvar alterações' : 'Criar solicitação'}
         </button>
         <button
           type="button"

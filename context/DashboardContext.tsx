@@ -1,10 +1,10 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import type { Ticket, TicketFormData } from '@/types/ticket'
+import type { Solicitacao, SolicitacaoFormData } from '@/types/solicitacao'
 import type { Company } from '@/types/company'
 
-const TICKETS_KEY = 'financehub_tickets'
+const SOLICITACOES_KEY = 'financehub_solicitacoes'
 const COMPANIES_KEY = 'financehub_companies'
 
 const defaultCompanies: Company[] = [
@@ -17,7 +17,7 @@ const defaultCompanies: Company[] = [
   { id: 'c7', nome: 'Pontal Distribuidora de Produtos Ltda', cnpjs: ['78.901.234/0001-56'], ativo: true },
 ]
 
-function getInitialTickets(): Ticket[] {
+function getInitialSolicitacoes(): Solicitacao[] {
   const now = new Date().toISOString()
   return [
     { id: '1', numero: '1', titulo: 'Alvorada Soluções Tecnológicas Ltda', origem: '12.345.678/0001-90', prioridade: 'media', status: 'aberto', estagio: 'Pendente', dataCriacao: now },
@@ -33,9 +33,9 @@ function getInitialTickets(): Ticket[] {
 type DashboardContextValue = {
   companies: Company[]
   setCompanies: React.Dispatch<React.SetStateAction<Company[]>>
-  tickets: Ticket[]
-  setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>
-  addTicket: (formData: TicketFormData) => void
+  solicitacoes: Solicitacao[]
+  setSolicitacoes: React.Dispatch<React.SetStateAction<Solicitacao[]>>
+  addSolicitacao: (formData: SolicitacaoFormData) => void
   companiesModalOpen: boolean
   setCompaniesModalOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
@@ -52,13 +52,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     return defaultCompanies
   })
 
-  const [tickets, setTickets] = useState<Ticket[]>(() => {
-    if (typeof window === 'undefined') return getInitialTickets()
+  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>(() => {
+    if (typeof window === 'undefined') return getInitialSolicitacoes()
     try {
-      const saved = localStorage.getItem(TICKETS_KEY)
+      const saved = localStorage.getItem(SOLICITACOES_KEY)
       if (saved) return JSON.parse(saved)
     } catch {}
-    return getInitialTickets()
+    return getInitialSolicitacoes()
   })
 
   const [companiesModalOpen, setCompaniesModalOpen] = useState(false)
@@ -71,26 +71,26 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(TICKETS_KEY, JSON.stringify(tickets))
+      localStorage.setItem(SOLICITACOES_KEY, JSON.stringify(solicitacoes))
     }
-  }, [tickets])
+  }, [solicitacoes])
 
-  const addTicket = useCallback((formData: TicketFormData) => {
-    const newTicket: Ticket = {
+  const addSolicitacao = useCallback((formData: SolicitacaoFormData) => {
+    const nova: Solicitacao = {
       ...formData,
       id: Date.now().toString(),
       dataCriacao: new Date().toISOString(),
       dataAtualizacao: new Date().toISOString(),
     }
-    setTickets((prev) => [newTicket, ...prev])
+    setSolicitacoes((prev) => [nova, ...prev])
   }, [])
 
   const value: DashboardContextValue = {
     companies,
     setCompanies,
-    tickets,
-    setTickets,
-    addTicket,
+    solicitacoes,
+    setSolicitacoes,
+    addSolicitacao,
     companiesModalOpen,
     setCompaniesModalOpen,
   }

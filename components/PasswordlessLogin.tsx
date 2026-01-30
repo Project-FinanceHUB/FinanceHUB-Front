@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import EmailInput from './EmailInput'
 
@@ -10,31 +10,38 @@ interface PasswordlessLoginProps {
   onBack?: () => void
 }
 
-export default function PasswordlessLogin({ email, onEmailChange, onBack }: PasswordlessLoginProps) {
+export default function PasswordlessLogin({ email, onEmailChange }: PasswordlessLoginProps) {
   const router = useRouter()
+  const emailInputRef = useRef<HTMLInputElement>(null)
   const [code, setCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
+  const [emailEnviado, setEmailEnviado] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [erroEmail, setErroEmail] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [countdown, setCountdown] = useState(0)
 
-  const isValidEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const isValidEmail = (val: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val || '').trim())
   }
 
-  const handleSendCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!isValidEmail(email)) return
-
+  const enviarCodigo = () => {
+    setErroEmail('')
+    const input = emailInputRef.current
+    const emailValue = (input?.value ?? email ?? '').toString().trim()
+    if (!isValidEmail(emailValue)) {
+      setErroEmail('Digite um e-mail válido para continuar.')
+      return
+    }
+    if (emailValue !== email) {
+      onEmailChange({ target: { value: emailValue } } as React.ChangeEvent<HTMLInputElement>)
+    }
+    setEmailEnviado(emailValue)
     setIsSending(true)
-    
-    // Simulate API call to send code
     setTimeout(() => {
       setIsSending(false)
       setCodeSent(true)
-      setCountdown(60) // 60 seconds countdown
-      
-      // Start countdown
+      setCountdown(60)
       const interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -47,7 +54,7 @@ export default function PasswordlessLogin({ email, onEmailChange, onBack }: Pass
     }, 1000)
   }
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
+  const handleVerifyCode = (e: React.FormEvent) => {
     e.preventDefault()
     if (code.length !== 6) return
 
@@ -56,7 +63,6 @@ export default function PasswordlessLogin({ email, onEmailChange, onBack }: Pass
     // Simulate API call to verify code
     setTimeout(() => {
       setIsVerifying(false)
-      console.log('Passwordless login successful:', { email, code })
       router.push('/dashboard')
     }, 1000)
   }
@@ -82,7 +88,7 @@ export default function PasswordlessLogin({ email, onEmailChange, onBack }: Pass
           </h2>
           <p className="text-sm text-gray-600 mb-6 text-center">
             Enviamos um código de 6 dígitos para <br />
-            <span className="font-semibold text-gray-900">{email}</span>
+            <span className="font-semibold text-gray-900">{emailEnviado || email}</span>
           </p>
 
           {/* Code Input Form */}
@@ -166,26 +172,36 @@ export default function PasswordlessLogin({ email, onEmailChange, onBack }: Pass
           Digite seu e-mail e enviaremos um código de verificação
         </p>
 
-        {/* Form */}
-        <form onSubmit={handleSendCode} className="space-y-6">
-          {/* Email Input */}
+        <div
+          className="space-y-6"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              enviarCodigo()
+            }
+          }}
+        >
           <div>
             <EmailInput
+              ref={emailInputRef}
               value={email}
               onChange={onEmailChange}
               isValid={email.length > 0 ? isValidEmail(email) : undefined}
             />
           </div>
 
-          {/* Submit Button */}
+          {erroEmail && (
+            <p className="text-sm text-red-600 text-center">{erroEmail}</p>
+          )}
           <button
-            type="submit"
-            disabled={!isValidEmail(email) || isSending}
-            className="w-full py-3 px-4 bg-[var(--primary)] text-white font-semibold rounded-lg shadow-lg hover:bg-[var(--accent)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--primary)] transform hover:scale-[1.02] active:scale-[0.98]"
+            type="button"
+            onClick={enviarCodigo}
+            disabled={isSending}
+            className="w-full py-3 px-4 bg-[var(--primary)] text-white font-semibold rounded-lg shadow-lg hover:opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSending ? 'Enviando...' : 'Enviar código'}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   )

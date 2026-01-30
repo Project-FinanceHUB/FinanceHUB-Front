@@ -311,7 +311,7 @@ export default function BoletoPaymentsChart() {
               </p>
             </div>
             <p className="text-sm text-gray-600 mb-4">
-              Use este número como referência ao falar com o suporte ou consultar o status do seu envio na área de tickets.
+              Use este número como referência ao falar com o suporte ou consultar o status do seu envio na área de solicitações.
             </p>
             <div className="flex gap-3">
               <button

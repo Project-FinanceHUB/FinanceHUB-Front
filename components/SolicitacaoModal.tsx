@@ -1,24 +1,20 @@
 'use client'
 
 import { useEffect } from 'react'
-import type { Ticket } from '@/types/ticket'
+import type { Solicitacao } from '@/types/solicitacao'
 import type { Company } from '@/types/company'
-import TicketForm from './TicketForm'
-import type { TicketFormData } from '@/types/ticket'
+import SolicitacaoForm from './SolicitacaoForm'
+import type { SolicitacaoFormData } from '@/types/solicitacao'
 
-type TicketModalProps = {
+type SolicitacaoModalProps = {
   isOpen: boolean
-  ticket?: Ticket
+  solicitacao?: Solicitacao
   companies: Company[]
   onClose: () => void
-  onSubmit: (data: TicketFormData) => void
+  onSubmit: (data: SolicitacaoFormData) => void
 }
 
-function cn(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(' ')
-}
-
-export default function TicketModal({ isOpen, ticket, companies, onClose, onSubmit }: TicketModalProps) {
+export default function SolicitacaoModal({ isOpen, solicitacao, companies, onClose, onSubmit }: SolicitacaoModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -32,26 +28,23 @@ export default function TicketModal({ isOpen, ticket, companies, onClose, onSubm
 
   if (!isOpen) return null
 
-  const handleSubmit = (data: TicketFormData) => {
+  const handleSubmit = (data: SolicitacaoFormData) => {
     onSubmit(data)
     onClose()
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Overlay */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal */}
       <div className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
-            {ticket ? 'Editar Ticket' : 'Novo Ticket'}
+            {solicitacao ? 'Editar Solicitação' : 'Nova Solicitação'}
           </h2>
           <button
             type="button"
@@ -65,9 +58,8 @@ export default function TicketModal({ isOpen, ticket, companies, onClose, onSubm
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <TicketForm ticket={ticket} companies={companies} onSubmit={handleSubmit} onCancel={onClose} />
+          <SolicitacaoForm solicitacao={solicitacao} companies={companies} onSubmit={handleSubmit} onCancel={onClose} />
         </div>
       </div>
     </div>

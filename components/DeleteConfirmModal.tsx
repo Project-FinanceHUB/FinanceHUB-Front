@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 
 type DeleteConfirmModalProps = {
   isOpen: boolean
-  ticketNumero: string
+  solicitacaoNumero: string
   onClose: () => void
   onConfirm: () => void
 }
@@ -15,7 +15,7 @@ function cn(...parts: Array<string | false | null | undefined>) {
 
 export default function DeleteConfirmModal({
   isOpen,
-  ticketNumero,
+  solicitacaoNumero,
   onClose,
   onConfirm,
 }: DeleteConfirmModalProps) {
@@ -66,7 +66,7 @@ export default function DeleteConfirmModal({
             Confirmar exclusão
           </h3>
           <p className="text-sm text-gray-600 text-center mb-6">
-            Tem certeza que deseja excluir o ticket <strong>#{ticketNumero}</strong>? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir a solicitação <strong>#{solicitacaoNumero}</strong>? Esta ação não pode ser desfeita.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3">

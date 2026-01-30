@@ -52,6 +52,7 @@ const initialLancamentos: Lancamento[] = [
 ]
 
 export default function LancamentosPage() {
+  const [mounted, setMounted] = useState(false)
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -68,6 +69,10 @@ export default function LancamentosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedLancamento, setSelectedLancamento] = useState<Lancamento | undefined>()
   const [lancamentoToDelete, setLancamentoToDelete] = useState<Lancamento | undefined>()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -124,6 +129,14 @@ export default function LancamentosPage() {
     { key: 'tipo', label: 'Tipo', cellClassName: 'text-gray-700' },
     { key: 'acoes', label: 'Ações' },
   ]
+
+  if (!mounted) {
+    return (
+      <div className="px-4 sm:px-6 py-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-gray-500 text-sm">Carregando...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="px-4 sm:px-6 py-6">

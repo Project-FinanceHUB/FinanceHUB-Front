@@ -4,9 +4,15 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import TicketModal from '@/components/TicketModal'
+import SolicitacaoModal from '@/components/SolicitacaoModal'
 import CompanyManagementModal from '@/components/CompanyManagementModal'
+import ConfiguracoesModal from '@/components/ConfiguracoesModal'
+import HistoricoModal from '@/components/HistoricoModal'
+import SuporteModal from '@/components/SuporteModal'
+import NotificacoesDropdown from '@/components/NotificacoesDropdown'
+import Footer from '@/components/Footer'
 import { useDashboard } from '@/context/DashboardContext'
+import { useSuporte } from '@/context/SuporteContext'
 import type { CompanyFormData } from '@/types/company'
 
 function cn(...parts: Array<string | false | null | undefined>) {
@@ -140,10 +146,18 @@ function SidebarItem({
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { companies, setCompanies, addTicket, companiesModalOpen, setCompaniesModalOpen } = useDashboard()
+  const { companies, setCompanies, addSolicitacao, companiesModalOpen, setCompaniesModalOpen } = useDashboard()
+  const { mensagens } = useSuporte()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
+  const [isSolicitacaoModalOpen, setIsSolicitacaoModalOpen] = useState(false)
+  const [isNotificacoesOpen, setIsNotificacoesOpen] = useState(false)
+
+  const mensagensNaoLidas = mensagens.filter((m) => !m.lida && m.direcao === 'recebida').length
+
+  const handleNotificacaoClick = () => {
+    setIsNotificacoesOpen(!isNotificacoesOpen)
+  }
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -193,19 +207,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               type="button"
               onClick={() => {
                 setIsMobileMenuOpen(false)
-                setIsTicketModalOpen(true)
+                setIsSolicitacaoModalOpen(true)
               }}
               className={cn(
                 'w-full inline-flex items-center rounded-xl border border-[var(--primary)] bg-white text-[var(--primary)] font-semibold shadow-sm hover:bg-[var(--secondary)] transition relative group',
                 isSidebarCollapsed ? 'md:justify-center md:px-2 md:gap-0 gap-2 px-4 py-3' : 'justify-center gap-2 px-4 py-3'
               )}
-              title={isSidebarCollapsed ? 'Abrir novo ticket' : undefined}
+              title={isSidebarCollapsed ? 'Abrir nova solicitação' : undefined}
             >
               <Icon name="plus" className="w-5 h-5" />
-              {!isSidebarCollapsed && <span>Abrir novo ticket</span>}
+              {!isSidebarCollapsed && <span>Abrir nova solicitação</span>}
               {isSidebarCollapsed && (
                 <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                  Abrir novo ticket
+                  Abrir nova solicitação
                 </span>
               )}
             </button>
@@ -236,7 +250,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </nav>
         </aside>
 
-        <main className={cn('flex-1 transition-all duration-300 w-full', isSidebarCollapsed ? 'md:ml-20' : 'md:ml-72')}>
+        <main className={cn('flex-1 transition-all duration-300 w-full flex flex-col', isSidebarCollapsed ? 'md:ml-20' : 'md:ml-72')}>
           <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200">
             <div className="h-16 px-4 sm:px-6 flex items-center gap-3">
               <button
@@ -259,12 +273,30 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               </div>
 
               <div className="flex items-center gap-3 ml-auto">
-                <button type="button" className="relative inline-flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-50" aria-label="Notificações">
-                  <span className="text-gray-600">
-                    <Icon name="bell" />
-                  </span>
-                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--primary)] text-white text-xs flex items-center justify-center">2</span>
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={handleNotificacaoClick}
+                    className={cn(
+                      'relative inline-flex items-center justify-center w-10 h-10 rounded-xl border transition',
+                      isNotificacoesOpen
+                        ? 'border-[var(--primary)] bg-[var(--secondary)]/30'
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                    )}
+                    aria-label="Notificações do suporte"
+                    title={mensagensNaoLidas > 0 ? `${mensagensNaoLidas} mensagem(ns) não lida(s)` : 'Notificações'}
+                  >
+                    <span className="text-gray-600">
+                      <Icon name="bell" />
+                    </span>
+                    {mensagensNaoLidas > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold flex items-center justify-center">
+                        {mensagensNaoLidas}
+                      </span>
+                    )}
+                  </button>
+                  <NotificacoesDropdown isOpen={isNotificacoesOpen} onClose={() => setIsNotificacoesOpen(false)} />
+                </div>
                 <button type="button" className="inline-flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 hover:bg-gray-50">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center font-semibold">B</div>
                   <div className="hidden sm:block text-left leading-tight">
@@ -276,17 +308,21 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             </div>
           </header>
 
-          {children}
+          <div className="flex-1">
+            {children}
+          </div>
+
+          <Footer />
         </main>
       </div>
 
-      <TicketModal
-        isOpen={isTicketModalOpen}
+      <SolicitacaoModal
+        isOpen={isSolicitacaoModalOpen}
         companies={companies}
-        onClose={() => setIsTicketModalOpen(false)}
+        onClose={() => setIsSolicitacaoModalOpen(false)}
         onSubmit={(formData) => {
-          addTicket(formData)
-          setIsTicketModalOpen(false)
+          addSolicitacao(formData)
+          setIsSolicitacaoModalOpen(false)
         }}
       />
 
@@ -304,6 +340,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           setCompanies((prev) => prev.filter((c) => c.id !== id))
         }}
       />
+
+      <ConfiguracoesModal />
+      <HistoricoModal />
+      <SuporteModal />
     </div>
   )
 }

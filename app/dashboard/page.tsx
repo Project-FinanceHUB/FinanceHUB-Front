@@ -2,11 +2,11 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import ResponsiveTable from '@/components/ResponsiveTable'
-import TicketModal from '@/components/TicketModal'
+import SolicitacaoModal from '@/components/SolicitacaoModal'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal'
 import BoletoPaymentsChart from '@/components/BoletoPaymentsChart'
 import { useDashboard } from '@/context/DashboardContext'
-import type { Ticket, TicketFormData, TicketPriority, TicketStatus } from '@/types/ticket'
+import type { Solicitacao, SolicitacaoFormData, SolicitacaoStatus } from '@/types/solicitacao'
 import type { Company, CompanyFormData } from '@/types/company'
 
 function cn(...parts: Array<string | false | null | undefined>) {
@@ -38,7 +38,7 @@ function Icon({ name, className }: { name: string; className?: string }) {
           <path d="M4 13h7V4H4v9Zm9 7h7V11h-7v9ZM4 20h7v-5H4v5Zm9-11h7V4h-7v5Z" fill="currentColor" />
         </svg>
       )
-    case 'ticket':
+    case 'solicitacao':
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
@@ -167,16 +167,21 @@ function Icon({ name, className }: { name: string; className?: string }) {
   }
 
 export default function DashboardPage() {
-  const { companies, setCompanies, tickets, setTickets, addTicket, setCompaniesModalOpen } = useDashboard()
+  const { companies, setCompanies, solicitacoes, setSolicitacoes, addSolicitacao, setCompaniesModalOpen } = useDashboard()
+  const [mounted, setMounted] = useState(false)
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'em_revisao' | 'fechado'>('todos')
   const [query, setQuery] = useState('')
   const [sortBy, setSortBy] = useState<'numero' | 'titulo' | 'origem' | 'status'>('numero')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [pageSize, setPageSize] = useState<10 | 20 | 30 | 50>(10)
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
+  const [isSolicitacaoModalOpen, setIsSolicitacaoModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | undefined>()
-  const [ticketToDelete, setTicketToDelete] = useState<Ticket | undefined>()
+  const [selectedSolicitacao, setSelectedSolicitacao] = useState<Solicitacao | undefined>()
+  const [solicitacaoToDelete, setSolicitacaoToDelete] = useState<Solicitacao | undefined>()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Atualiza companies quando a página volta ao foco (após voltar da página de empresas)
   useEffect(() => {
@@ -196,54 +201,53 @@ export default function DashboardPage() {
     }
   }, [setCompanies])
 
-  // Funções CRUD (criar usa addTicket do contexto; editar/excluir usam setTickets)
-  const handleCreateTicket = addTicket
+  const handleCreateSolicitacao = addSolicitacao
 
-  const handleUpdateTicket = (formData: TicketFormData) => {
-    if (!selectedTicket) return
-    setTickets((prev) =>
-      prev.map((ticket) =>
-        ticket.id === selectedTicket.id
-          ? { ...ticket, ...formData, dataAtualizacao: new Date().toISOString() }
-          : ticket
+  const handleUpdateSolicitacao = (formData: SolicitacaoFormData) => {
+    if (!selectedSolicitacao) return
+    setSolicitacoes((prev) =>
+      prev.map((sol) =>
+        sol.id === selectedSolicitacao.id
+          ? { ...sol, ...formData, dataAtualizacao: new Date().toISOString() }
+          : sol
       )
     )
-    setSelectedTicket(undefined)
+    setSelectedSolicitacao(undefined)
   }
 
-  const handleDeleteTicket = () => {
-    if (!ticketToDelete) return
-    setTickets((prev) => prev.filter((ticket) => ticket.id !== ticketToDelete.id))
-    setTicketToDelete(undefined)
+  const handleDeleteSolicitacao = () => {
+    if (!solicitacaoToDelete) return
+    setSolicitacoes((prev) => prev.filter((sol) => sol.id !== solicitacaoToDelete.id))
+    setSolicitacaoToDelete(undefined)
   }
 
   const openCreateModal = () => {
-    setSelectedTicket(undefined)
-    setIsTicketModalOpen(true)
+    setSelectedSolicitacao(undefined)
+    setIsSolicitacaoModalOpen(true)
   }
 
-  const openEditModal = (ticket: Ticket) => {
-    setSelectedTicket(ticket)
-    setIsTicketModalOpen(true)
+  const openEditModal = (solicitacao: Solicitacao) => {
+    setSelectedSolicitacao(solicitacao)
+    setIsSolicitacaoModalOpen(true)
   }
 
-  const openDeleteModal = (ticket: Ticket) => {
-    setTicketToDelete(ticket)
+  const openDeleteModal = (solicitacao: Solicitacao) => {
+    setSolicitacaoToDelete(solicitacao)
     setIsDeleteModalOpen(true)
   }
 
-  const handleTicketSubmit = (formData: TicketFormData) => {
-    if (selectedTicket) {
-      handleUpdateTicket(formData)
+  const handleSolicitacaoSubmit = (formData: SolicitacaoFormData) => {
+    if (selectedSolicitacao) {
+      handleUpdateSolicitacao(formData)
     } else {
-      handleCreateTicket(formData)
+      handleCreateSolicitacao(formData)
     }
   }
 
 
-  const ticketsFiltrados = useMemo(() => {
+  const solicitacoesFiltradas = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const filtered = tickets.filter((t) => {
+    const filtered = solicitacoes.filter((t) => {
       const statusLabel = t.status === 'aberto'
         ? 'aberto'
         : t.status === 'pendente'
@@ -269,16 +273,16 @@ export default function DashboardPage() {
     })
 
     const sorted = [...filtered].sort((a, b) => {
-      const getValue = (ticket: Ticket) => {
+      const getValue = (sol: Solicitacao) => {
         switch (sortBy) {
           case 'numero':
-            return ticket.numero
+            return sol.numero
           case 'titulo':
-            return ticket.titulo
+            return sol.titulo
           case 'origem':
-            return ticket.origem
+            return sol.origem
           case 'status':
-            return ticket.status
+            return sol.status
           default:
             return ''
         }
@@ -293,19 +297,27 @@ export default function DashboardPage() {
     })
 
     return sorted
-  }, [tickets, query, statusFiltro, sortBy, sortDirection])
+  }, [solicitacoes, query, statusFiltro, sortBy, sortDirection])
 
-  const ticketsVisiveis = useMemo(
-    () => ticketsFiltrados.slice(0, pageSize),
-    [ticketsFiltrados, pageSize]
+  const solicitacoesVisiveis = useMemo(
+    () => solicitacoesFiltradas.slice(0, pageSize),
+    [solicitacoesFiltradas, pageSize]
   )
 
   const totals = useMemo(() => {
     const boletosEmAberto = 3
-    const ticketsPendentes = tickets.filter((t) => t.status === 'pendente' || t.status === 'aguardando_validacao').length
+    const solicitacoesPendentes = solicitacoes.filter((t) => t.status === 'pendente' || t.status === 'aguardando_validacao').length
     const mensagensNaoLidas = 2
-    return { boletosEmAberto, ticketsPendentes, mensagensNaoLidas }
-  }, [tickets])
+    return { boletosEmAberto, solicitacoesPendentes, mensagensNaoLidas }
+  }, [solicitacoes])
+
+  if (!mounted) {
+    return (
+      <div className="px-4 sm:px-6 py-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-gray-500 text-sm">Carregando dashboard...</div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -313,7 +325,7 @@ export default function DashboardPage() {
             {/* Headline + Quick actions */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-semibold">Tickets</h1>
+                <h1 className="text-2xl font-semibold">Solicitações</h1>
                 <p className="text-sm text-gray-500">Visão centralizada de suporte, comunicação e pendências financeiras.</p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -322,7 +334,7 @@ export default function DashboardPage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-[var(--accent)] transition"
                 >
                   <Icon name="plus" className="w-5 h-5" />
-                  Abrir ticket
+                  Abrir solicitação
                 </button>
                 <button
                   type="button"
@@ -352,11 +364,11 @@ export default function DashboardPage() {
               <div className="rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-gray-500">Tickets pendentes</div>
-                    <div className="text-3xl font-semibold mt-1">{totals.ticketsPendentes}</div>
+                    <div className="text-sm text-gray-500">Solicitações pendentes</div>
+                    <div className="text-3xl font-semibold mt-1">{totals.solicitacoesPendentes}</div>
                   </div>
                   <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-800 flex items-center justify-center ring-1 ring-amber-100">
-                    <Icon name="ticket" />
+                    <Icon name="solicitacao" />
                   </div>
                 </div>
                 <div className="mt-3 text-xs text-gray-500">Priorize o que precisa de validação.</div>
@@ -380,7 +392,7 @@ export default function DashboardPage() {
               <BoletoPaymentsChart />
             </div>
 
-            {/* Tickets table */}
+            {/* Tabela de solicitações */}
             <div className="mt-6 rounded-2xl bg-white border border-gray-200 shadow-sm">
               <div className="p-4 sm:p-5 space-y-3">
                 {/* Busca + tamanho da página */}
@@ -436,7 +448,7 @@ export default function DashboardPage() {
                         : 'bg-white border-gray-200 hover:bg-gray-50'
                     )}
                   >
-                    Tickets pendentes
+                    Solicitações pendentes
                   </button>
                   <button
                     type="button"
@@ -466,7 +478,7 @@ export default function DashboardPage() {
               </div>
 
               <ResponsiveTable
-                aria-label="Tabela de tickets"
+                aria-label="Tabela de solicitações"
                 columns={[
                   { key: 'numero', label: 'Número/ID', cellClassName: 'font-semibold text-teal-dark' },
                   { key: 'titulo', label: 'Razão Social', cellClassName: 'text-gray-900' },
@@ -474,18 +486,18 @@ export default function DashboardPage() {
                   { key: 'status' as any, label: 'Status' },
                   { key: 'acoes' as any, label: 'Ações' },
                 ]}
-                rows={ticketsVisiveis as any}
+                rows={solicitacoesVisiveis as any}
                 renderCell={(row, key) => {
-                  const t = row as Ticket
+                  const t = row as Solicitacao
                   const columnKey = key as string
 
-                  const statusTone: Record<TicketStatus, 'green' | 'amber' | 'blue' | 'gray'> = {
+                  const statusTone: Record<SolicitacaoStatus, 'green' | 'amber' | 'blue' | 'gray'> = {
                     aberto: 'green',
                     pendente: 'amber',
                     aguardando_validacao: 'blue',
                     fechado: 'gray',
                   }
-                  const statusLabel: Record<TicketStatus, string> = {
+                  const statusLabel: Record<SolicitacaoStatus, string> = {
                     aberto: 'Aberto',
                     pendente: 'Pendente',
                     aguardando_validacao: 'Aguardando validação',
@@ -523,34 +535,34 @@ export default function DashboardPage() {
                 }}
               />
 
-              {ticketsVisiveis.length === 0 && (
+              {solicitacoesVisiveis.length === 0 && (
                 <div className="px-5 py-10 text-center text-gray-500 text-sm">
-                  Nenhum ticket encontrado para o filtro/pesquisa atual.
+                  Nenhuma solicitação encontrada para o filtro/pesquisa atual.
                 </div>
               )}
             </div>
           </div>
 
       {/* Modais */}
-      <TicketModal
-        isOpen={isTicketModalOpen}
-        ticket={selectedTicket}
+      <SolicitacaoModal
+        isOpen={isSolicitacaoModalOpen}
+        solicitacao={selectedSolicitacao}
         companies={companies}
         onClose={() => {
-          setIsTicketModalOpen(false)
-          setSelectedTicket(undefined)
+          setIsSolicitacaoModalOpen(false)
+          setSelectedSolicitacao(undefined)
         }}
-        onSubmit={handleTicketSubmit}
+        onSubmit={handleSolicitacaoSubmit}
       />
 
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
-        ticketNumero={ticketToDelete?.numero || ''}
+        solicitacaoNumero={solicitacaoToDelete?.numero || ''}
         onClose={() => {
           setIsDeleteModalOpen(false)
-          setTicketToDelete(undefined)
+          setSolicitacaoToDelete(undefined)
         }}
-        onConfirm={handleDeleteTicket}
+        onConfirm={handleDeleteSolicitacao}
       />
     </>
   )
