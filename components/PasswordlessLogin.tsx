@@ -3,6 +3,8 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import EmailInput from './EmailInput'
+import { useAuth } from '@/context/AuthContext'
+import * as authAPI from '@/lib/api/auth'
 
 interface PasswordlessLoginProps {
   email: string
@@ -12,12 +14,14 @@ interface PasswordlessLoginProps {
 
 export default function PasswordlessLogin({ email, onEmailChange }: PasswordlessLoginProps) {
   const router = useRouter()
+  const { login } = useAuth()
   const emailInputRef = useRef<HTMLInputElement>(null)
   const [code, setCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
   const [emailEnviado, setEmailEnviado] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [erroEmail, setErroEmail] = useState('')
+  const [erroCodigo, setErroCodigo] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [countdown, setCountdown] = useState(0)
 
@@ -25,23 +29,31 @@ export default function PasswordlessLogin({ email, onEmailChange }: Passwordless
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val || '').trim())
   }
 
-  const enviarCodigo = () => {
+  const enviarCodigo = async () => {
     setErroEmail('')
     const input = emailInputRef.current
     const emailValue = (input?.value ?? email ?? '').toString().trim()
+    
     if (!isValidEmail(emailValue)) {
       setErroEmail('Digite um e-mail válido para continuar.')
       return
     }
+    
     if (emailValue !== email) {
       onEmailChange({ target: { value: emailValue } } as React.ChangeEvent<HTMLInputElement>)
     }
-    setEmailEnviado(emailValue)
+    
     setIsSending(true)
-    setTimeout(() => {
-      setIsSending(false)
+    
+    try {
+      console.log('Enviando código para:', emailValue)
+      const result = await authAPI.sendAuthCode(emailValue)
+      console.log('Código enviado com sucesso:', result)
+      
+      setEmailEnviado(emailValue)
       setCodeSent(true)
       setCountdown(60)
+      
       const interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -51,26 +63,41 @@ export default function PasswordlessLogin({ email, onEmailChange }: Passwordless
           return prev - 1
         })
       }, 1000)
-    }, 1000)
+    } catch (error: any) {
+      console.error('Erro ao enviar código:', error)
+      const errorMessage = error.message || 'Erro ao enviar código. Verifique se o backend está rodando em http://localhost:3001'
+      setErroEmail(errorMessage)
+    } finally {
+      // Sempre resetar o estado de loading
+      setIsSending(false)
+    }
   }
 
-  const handleVerifyCode = (e: React.FormEvent) => {
+  const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault()
     if (code.length !== 6) return
 
     setIsVerifying(true)
+    setErroCodigo('')
     
-    // Simulate API call to verify code
-    setTimeout(() => {
-      setIsVerifying(false)
+    try {
+      console.log('[PasswordlessLogin] Verificando código...')
+      await login(emailEnviado || email, code)
+      console.log('[PasswordlessLogin] Login bem-sucedido, redirecionando...')
       router.push('/dashboard')
-    }, 1000)
+    } catch (error: any) {
+      console.error('[PasswordlessLogin] Erro ao verificar código:', error)
+      setErroCodigo(error.message || 'Código inválido. Tente novamente.')
+      setIsVerifying(false)
+    }
   }
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     if (countdown > 0) return
     setCodeSent(false)
     setCode('')
+    setErroCodigo('')
+    await enviarCodigo()
   }
 
   const handleChangeEmail = () => {
@@ -114,6 +141,9 @@ export default function PasswordlessLogin({ email, onEmailChange }: Passwordless
               <p className="text-xs text-gray-500 mt-2 text-center">
                 Digite o código de 6 dígitos
               </p>
+              {erroCodigo && (
+                <p className="text-xs text-red-600 mt-2 text-center">{erroCodigo}</p>
+              )}
             </div>
 
             {/* Verify Button */}
@@ -171,6 +201,19 @@ export default function PasswordlessLogin({ email, onEmailChange }: Passwordless
         <p className="text-sm text-gray-600 mb-6 text-center">
           Digite seu e-mail e enviaremos um código de verificação
         </p>
+
+        {/* Link para Cadastro */}
+        <div className="text-center mb-4">
+          <p className="text-sm text-gray-600">
+            Não tem uma conta?{' '}
+            <a
+              href="/cadastro"
+              className="text-[var(--primary)] hover:text-[var(--accent)] font-medium transition-colors"
+            >
+              Criar conta
+            </a>
+          </p>
+        </div>
 
         <div
           className="space-y-6"

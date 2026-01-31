@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useConfiguracoes } from '@/context/ConfiguracoesContext'
-import type { User, UserFormData, UserRole, Permission, PermissionFormData } from '@/types/configuracoes'
+import type { User, UserFormData, UserRole } from '@/types/configuracoes'
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ')
@@ -11,9 +11,6 @@ function cn(...parts: Array<string | false | null | undefined>) {
 const TABS = [
   { id: 'usuarios', label: 'Usuários' },
   { id: 'perfil', label: 'Perfil' },
-  { id: 'preferencias', label: 'Preferências' },
-  { id: 'seguranca', label: 'Segurança' },
-  { id: 'permissoes', label: 'Permissões' },
 ]
 
 const ROLES: { value: UserRole; label: string }[] = [
@@ -30,12 +27,6 @@ export default function ConfiguracoesModal() {
     deleteUser,
     profile,
     setProfile,
-    preferences,
-    setPreferences,
-    permissions,
-    addPermission,
-    updatePermission,
-    deletePermission,
     configuracoesModalOpen,
     setConfiguracoesModalOpen,
     configuracoesModalTab,
@@ -51,12 +42,6 @@ export default function ConfiguracoesModal() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [userErrors, setUserErrors] = useState<Record<string, string>>({})
 
-  const [permForm, setPermForm] = useState<PermissionFormData>({
-    chave: '',
-    descricao: '',
-    ativo: true,
-  })
-  const [editingPermId, setEditingPermId] = useState<string | null>(null)
 
   useEffect(() => {
     if (configuracoesModalOpen) document.body.style.overflow = 'hidden'
@@ -71,8 +56,6 @@ export default function ConfiguracoesModal() {
       setEditingUserId(null)
       setUserForm({ nome: '', email: '', role: 'usuario', ativo: true })
       setUserErrors({})
-      setEditingPermId(null)
-      setPermForm({ chave: '', descricao: '', ativo: true })
     }
   }, [configuracoesModalOpen])
 
@@ -118,35 +101,6 @@ export default function ConfiguracoesModal() {
 
   const handleSaveProfile = () => {
     setProfile({ ...profile })
-  }
-
-  const handleSavePreferences = () => {
-    setPreferences({ ...preferences })
-  }
-
-  const handleSavePermission = () => {
-    if (!permForm.chave.trim() || !permForm.descricao.trim()) return
-    if (editingPermId) {
-      updatePermission(editingPermId, permForm)
-      setEditingPermId(null)
-    } else {
-      addPermission(permForm)
-    }
-    setPermForm({ chave: '', descricao: '', ativo: true })
-  }
-
-  const handleEditPermission = (p: Permission) => {
-    setEditingPermId(p.id)
-    setPermForm({ chave: p.chave, descricao: p.descricao, ativo: p.ativo })
-  }
-
-  const handleDeletePermission = (id: string) => {
-    if (typeof window !== 'undefined' && !window.confirm('Remover esta permissão?')) return
-    deletePermission(id)
-    if (editingPermId === id) {
-      setEditingPermId(null)
-      setPermForm({ chave: '', descricao: '', ativo: true })
-    }
   }
 
   const inputBase = 'w-full rounded-xl border px-4 py-2.5 text-sm outline-none bg-white border-gray-200 focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]/40'
@@ -329,152 +283,6 @@ export default function ConfiguracoesModal() {
             </div>
           )}
 
-          {configuracoesModalTab === 'preferencias' && (
-            <div className="max-w-md space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tema</label>
-                <select
-                  value={preferences.tema}
-                  onChange={(e) => setPreferences((p) => ({ ...p, tema: e.target.value as 'claro' | 'escuro' | 'sistema' }))}
-                  className={inputBase}
-                >
-                  <option value="claro">Claro</option>
-                  <option value="escuro">Escuro</option>
-                  <option value="sistema">Sistema</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Idioma</label>
-                <select
-                  value={preferences.idioma}
-                  onChange={(e) => setPreferences((p) => ({ ...p, idioma: e.target.value }))}
-                  className={inputBase}
-                >
-                  <option value="pt-BR">Português (Brasil)</option>
-                  <option value="en">English</option>
-                  <option value="es">Español</option>
-                </select>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={preferences.notificacoesEmail}
-                  onChange={(e) => setPreferences((p) => ({ ...p, notificacoesEmail: e.target.checked }))}
-                  className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                />
-                <span className="text-sm text-gray-700">Notificações por e-mail</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={preferences.notificacoesPush}
-                  onChange={(e) => setPreferences((p) => ({ ...p, notificacoesPush: e.target.checked }))}
-                  className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                />
-                <span className="text-sm text-gray-700">Notificações push</span>
-              </label>
-              <button type="button" onClick={handleSavePreferences} className={btnPrimary}>Salvar preferências</button>
-            </div>
-          )}
-
-          {configuracoesModalTab === 'seguranca' && (
-            <div className="max-w-md space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Senha atual</label>
-                <input
-                  type="password"
-                  className={inputBase}
-                  placeholder="••••••••"
-                  readOnly
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
-                <input type="password" className={inputBase} placeholder="••••••••" readOnly />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar nova senha</label>
-                <input type="password" className={inputBase} placeholder="••••••••" readOnly />
-              </div>
-              <p className="text-sm text-gray-500">Alteração de senha disponível em versão futura.</p>
-            </div>
-          )}
-
-          {configuracoesModalTab === 'permissoes' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">Permissões cadastradas</h3>
-                <ul className="space-y-2">
-                  {permissions.map((p) => (
-                    <li
-                      key={p.id}
-                      className={cn(
-                        'rounded-xl border px-3 py-2.5 text-sm flex justify-between items-center cursor-pointer hover:bg-gray-50',
-                        editingPermId === p.id ? 'border-[var(--primary)] bg-[var(--secondary)]/40' : 'border-gray-200'
-                      )}
-                      onClick={() => handleEditPermission(p)}
-                    >
-                      <div>
-                        <div className="font-medium text-gray-900">{p.chave}</div>
-                        <div className="text-xs text-gray-500">{p.descricao}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleDeletePermission(p.id) }}
-                        className="w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center"
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" />
-                        </svg>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">{editingPermId ? 'Editar permissão' : 'Nova permissão'}</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Chave</label>
-                    <input
-                      value={permForm.chave}
-                      onChange={(e) => setPermForm((f) => ({ ...f, chave: e.target.value }))}
-                      className={inputBase}
-                      placeholder="ex: modulo.acao"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                    <input
-                      value={permForm.descricao}
-                      onChange={(e) => setPermForm((f) => ({ ...f, descricao: e.target.value }))}
-                      className={inputBase}
-                      placeholder="Descrição da permissão"
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={permForm.ativo}
-                      onChange={(e) => setPermForm((f) => ({ ...f, ativo: e.target.checked }))}
-                      className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                    />
-                    <span className="text-sm text-gray-700">Ativo</span>
-                  </label>
-                  <div className="flex gap-3">
-                    <button type="button" onClick={handleSavePermission} className={btnPrimary}>
-                      {editingPermId ? 'Salvar' : 'Adicionar'}
-                    </button>
-                    {editingPermId && (
-                      <button type="button" onClick={() => { setEditingPermId(null); setPermForm({ chave: '', descricao: '', ativo: true }) }} className={btnSecondary}>
-                        Cancelar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

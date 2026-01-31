@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import type { Solicitacao, SolicitacaoFormData } from '@/types/solicitacao'
 import type { Company } from '@/types/company'
+import * as companyAPI from '@/lib/api/companies'
 
 const SOLICITACOES_KEY = 'financehub_solicitacoes'
 const COMPANIES_KEY = 'financehub_companies'
@@ -38,19 +39,16 @@ type DashboardContextValue = {
   addSolicitacao: (formData: SolicitacaoFormData) => void
   companiesModalOpen: boolean
   setCompaniesModalOpen: React.Dispatch<React.SetStateAction<boolean>>
+  loading: boolean
+  error: string | null
 }
 
 const DashboardContext = createContext<DashboardContextValue | null>(null)
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const [companies, setCompanies] = useState<Company[]>(() => {
-    if (typeof window === 'undefined') return defaultCompanies
-    try {
-      const saved = localStorage.getItem(COMPANIES_KEY)
-      if (saved) return JSON.parse(saved)
-    } catch {}
-    return defaultCompanies
-  })
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>(() => {
     if (typeof window === 'undefined') return getInitialSolicitacoes()
@@ -63,17 +61,61 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const [companiesModalOpen, setCompaniesModalOpen] = useState(false)
 
+  // Carregar empresas da API
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies))
+    const loadCompanies = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await companyAPI.getCompanies()
+        setCompanies(data.length > 0 ? data : defaultCompanies)
+        // Sincronizar com localStorage como backup
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(COMPANIES_KEY, JSON.stringify(data.length > 0 ? data : defaultCompanies))
+        }
+      } catch (err: any) {
+        console.error('Erro ao carregar empresas da API:', err)
+        // Fallback para localStorage se API falhar
+        if (typeof window !== 'undefined') {
+          try {
+            const saved = localStorage.getItem(COMPANIES_KEY)
+            if (saved) {
+              setCompanies(JSON.parse(saved))
+            } else {
+              setCompanies(defaultCompanies)
+            }
+          } catch {
+            setCompanies(defaultCompanies)
+          }
+        } else {
+          setCompanies(defaultCompanies)
+        }
+        setError('Erro ao carregar empresas. Usando dados locais.')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [companies])
+
+    if (typeof window !== 'undefined') {
+      loadCompanies()
+    } else {
+      setCompanies(defaultCompanies)
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(SOLICITACOES_KEY, JSON.stringify(solicitacoes))
     }
   }, [solicitacoes])
+
+  // Sincronizar empresas com localStorage quando mudarem
+  useEffect(() => {
+    if (typeof window !== 'undefined' && companies.length > 0) {
+      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies))
+    }
+  }, [companies])
 
   const addSolicitacao = useCallback((formData: SolicitacaoFormData) => {
     const nova: Solicitacao = {
@@ -93,6 +135,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     addSolicitacao,
     companiesModalOpen,
     setCompaniesModalOpen,
+    loading,
+    error,
   }
 
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>

@@ -6,9 +6,10 @@ export type User = {
   email: string
   role: UserRole
   ativo: boolean
+  ultimoLogin?: string
 }
 
-export type UserFormData = Omit<User, 'id'>
+export type UserFormData = Omit<User, 'id' | 'ultimoLogin'>
 
 export type Profile = {
   nome: string

@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useDashboard } from '@/context/DashboardContext'
 import { useConfiguracoes } from '@/context/ConfiguracoesContext'
 
@@ -49,14 +50,11 @@ function Icon({ name, className }: { name: string; className?: string }) {
 }
 
 const CARDS = [
-  { id: 'usuarios', title: 'Gerenciamento de usuários', description: 'Adicione, edite e remova usuários da plataforma.', icon: 'users' },
   { id: 'perfil', title: 'Perfil', description: 'Atualize seus dados pessoais e informações de contato.', icon: 'user' },
-  { id: 'preferencias', title: 'Preferências da conta', description: 'Tema, idioma e notificações.', icon: 'settings' },
-  { id: 'seguranca', title: 'Segurança', description: 'Senha, autenticação em duas etapas e sessões.', icon: 'shield' },
-  { id: 'permissoes', title: 'Permissões', description: 'Controle de acesso e permissões por módulo.', icon: 'lock' },
 ]
 
 export default function ConfiguracoesPage() {
+  const router = useRouter()
   const { setCompaniesModalOpen } = useDashboard()
   const { setConfiguracoesModalOpen, setConfiguracoesModalTab } = useConfiguracoes()
 
@@ -65,16 +63,32 @@ export default function ConfiguracoesPage() {
     setConfiguracoesModalOpen(true)
   }
 
+  const handleUsuariosClick = () => {
+    router.push('/dashboard/usuarios')
+  }
+
   return (
     <div className="px-4 sm:px-6 py-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Configurações</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Gerenciamento de usuários, perfil, preferências da conta, segurança e permissões.
+          Gerenciamento de usuários e perfil.
         </p>
       </div>
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <button
+          type="button"
+          onClick={handleUsuariosClick}
+          className="text-left rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:border-[var(--primary)] hover:shadow-md transition-all group"
+        >
+          <div className="w-12 h-12 rounded-xl bg-[var(--secondary)] text-[var(--primary)] flex items-center justify-center mb-4 group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
+            <Icon name="users" />
+          </div>
+          <h3 className="font-semibold text-gray-900">Gerenciamento de usuários</h3>
+          <p className="text-sm text-gray-500 mt-1">Adicione, edite e remova usuários da plataforma.</p>
+        </button>
+
         {CARDS.map((card) => (
           <button
             key={card.id}

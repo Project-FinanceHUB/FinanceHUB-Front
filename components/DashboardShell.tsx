@@ -10,9 +10,11 @@ import ConfiguracoesModal from '@/components/ConfiguracoesModal'
 import HistoricoModal from '@/components/HistoricoModal'
 import SuporteModal from '@/components/SuporteModal'
 import NotificacoesDropdown from '@/components/NotificacoesDropdown'
+import UserAvatarDropdown from '@/components/UserAvatarDropdown'
 import Footer from '@/components/Footer'
 import { useDashboard } from '@/context/DashboardContext'
 import { useSuporte } from '@/context/SuporteContext'
+import { useAuth } from '@/context/AuthContext'
 import type { CompanyFormData } from '@/types/company'
 
 function cn(...parts: Array<string | false | null | undefined>) {
@@ -148,15 +150,28 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const pathname = usePathname()
   const { companies, setCompanies, addSolicitacao, companiesModalOpen, setCompaniesModalOpen } = useDashboard()
   const { mensagens } = useSuporte()
+  const { user } = useAuth()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSolicitacaoModalOpen, setIsSolicitacaoModalOpen] = useState(false)
   const [isNotificacoesOpen, setIsNotificacoesOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
 
   const mensagensNaoLidas = mensagens.filter((m) => !m.lida && m.direcao === 'recebida').length
 
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   const handleNotificacaoClick = () => {
     setIsNotificacoesOpen(!isNotificacoesOpen)
+    setIsUserMenuOpen(false)
+  }
+
+  const handleUserMenuClick = () => {
+    setIsUserMenuOpen(!isUserMenuOpen)
+    setIsNotificacoesOpen(false)
   }
 
   useEffect(() => {
@@ -284,7 +299,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                         : 'border-gray-200 bg-white hover:bg-gray-50'
                     )}
                     aria-label="Notificações do suporte"
-                    title={mensagensNaoLidas > 0 ? `${mensagensNaoLidas} mensagem(ns) não lida(s)` : 'Notificações'}
+                    title={isMounted && mensagensNaoLidas > 0 ? `${mensagensNaoLidas} mensagem(ns) não lida(s)` : 'Notificações'}
                   >
                     <span className="text-gray-600">
                       <Icon name="bell" />
@@ -297,13 +312,40 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   </button>
                   <NotificacoesDropdown isOpen={isNotificacoesOpen} onClose={() => setIsNotificacoesOpen(false)} />
                 </div>
-                <button type="button" className="inline-flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 hover:bg-gray-50">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center font-semibold">B</div>
-                  <div className="hidden sm:block text-left leading-tight">
-                    <div className="text-sm font-semibold">Brendow</div>
-                    <div className="text-xs text-gray-500">Cliente</div>
-                  </div>
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={handleUserMenuClick}
+                    className={cn(
+                      'inline-flex items-center gap-3 rounded-xl border px-3 py-2 transition-colors',
+                      isUserMenuOpen
+                        ? 'border-[var(--primary)] bg-[var(--secondary)]/30'
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                    )}
+                  >
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center font-semibold text-sm">
+                      {user?.nome?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    <div className="hidden sm:block text-left leading-tight">
+                      <div className="text-sm font-semibold">{user?.nome || 'Usuário'}</div>
+                      <div className="text-xs text-gray-500">
+                        {user?.role === 'admin' ? 'Administrador' : user?.role === 'gerente' ? 'Gerente' : user?.role === 'usuario' ? 'Usuário' : 'Cliente'}
+                      </div>
+                    </div>
+                    <svg
+                      className={cn(
+                        'w-4 h-4 text-gray-400 transition-transform',
+                        isUserMenuOpen && 'rotate-180'
+                      )}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <UserAvatarDropdown isOpen={isUserMenuOpen} onClose={() => setIsUserMenuOpen(false)} />
+                </div>
               </div>
             </div>
           </header>

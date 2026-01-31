@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import type {
   User,
   UserFormData,
@@ -9,6 +9,7 @@ import type {
   Permission,
   PermissionFormData,
 } from '@/types/configuracoes'
+import * as userAPI from '@/lib/api/users'
 
 const USERS_KEY = 'financehub_users'
 const PROFILE_KEY = 'financehub_profile'
@@ -38,9 +39,9 @@ const defaultPermissions: Permission[] = [
 
 type ConfiguracoesContextValue = {
   users: User[]
-  addUser: (data: UserFormData) => void
-  updateUser: (id: string, data: Partial<UserFormData>) => void
-  deleteUser: (id: string) => void
+  addUser: (data: UserFormData) => Promise<void>
+  updateUser: (id: string, data: Partial<UserFormData>) => Promise<void>
+  deleteUser: (id: string) => Promise<void>
   profile: Profile
   setProfile: React.Dispatch<React.SetStateAction<Profile>>
   preferences: Preferences
@@ -53,19 +54,16 @@ type ConfiguracoesContextValue = {
   setConfiguracoesModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   configuracoesModalTab: string
   setConfiguracoesModalTab: React.Dispatch<React.SetStateAction<string>>
+  loading: boolean
+  error: string | null
 }
 
 const ConfiguracoesContext = createContext<ConfiguracoesContextValue | null>(null)
 
 export function ConfiguracoesProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<User[]>(() => {
-    if (typeof window === 'undefined') return []
-    try {
-      const saved = localStorage.getItem(USERS_KEY)
-      if (saved) return JSON.parse(saved)
-    } catch {}
-    return []
-  })
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [profile, setProfile] = useState<Profile>(() => {
     if (typeof window === 'undefined') return defaultProfile
@@ -97,45 +95,127 @@ export function ConfiguracoesProvider({ children }: { children: ReactNode }) {
   const [configuracoesModalOpen, setConfiguracoesModalOpen] = useState(false)
   const [configuracoesModalTab, setConfiguracoesModalTab] = useState('usuarios')
 
+  // Carregar usuários da API
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(USERS_KEY, JSON.stringify(users))
+    const loadUsers = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await userAPI.getUsers()
+        setUsers(data)
+        // Sincronizar com localStorage como backup
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(USERS_KEY, JSON.stringify(data))
+        }
+      } catch (err: any) {
+        console.error('Erro ao carregar usuários da API:', err)
+        // Fallback para localStorage se API falhar
+        if (typeof window !== 'undefined') {
+          try {
+            const saved = localStorage.getItem(USERS_KEY)
+            if (saved) {
+              setUsers(JSON.parse(saved))
+            }
+          } catch {}
+        }
+        setError('Erro ao carregar usuários. Usando dados locais.')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [users])
 
+    if (typeof window !== 'undefined') {
+      loadUsers()
+    }
+  }, [])
+
+  // Salvar profile no localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
     }
   }, [profile])
 
+  // Salvar preferences no localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences))
     }
   }, [preferences])
 
+  // Salvar permissions no localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(permissions))
     }
   }, [permissions])
 
-  const addUser = (data: UserFormData) => {
-    const newUser: User = {
-      ...data,
-      id: Date.now().toString(),
+  const addUser = useCallback(async (data: UserFormData) => {
+    try {
+      const newUser = await userAPI.createUser(data)
+      setUsers((prev) => [...prev, newUser])
+      // Atualizar localStorage
+      if (typeof window !== 'undefined') {
+        const updated = [...users, newUser]
+        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+      }
+    } catch (err: any) {
+      console.error('Erro ao criar usuário:', err)
+      // Fallback para localStorage
+      const newUser: User = {
+        ...data,
+        id: Date.now().toString(),
+      }
+      setUsers((prev) => [...prev, newUser])
+      if (typeof window !== 'undefined') {
+        const updated = [...users, newUser]
+        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+      }
+      throw err
     }
-    setUsers((prev) => [...prev, newUser])
-  }
+  }, [users])
 
-  const updateUser = (id: string, data: Partial<UserFormData>) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)))
-  }
+  const updateUser = useCallback(async (id: string, data: Partial<UserFormData>) => {
+    try {
+      const updatedUser = await userAPI.updateUser(id, data)
+      setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)))
+      // Atualizar localStorage
+      if (typeof window !== 'undefined') {
+        const updated = users.map((u) => (u.id === id ? updatedUser : u))
+        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+      }
+    } catch (err: any) {
+      console.error('Erro ao atualizar usuário:', err)
+      // Fallback para localStorage
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)))
+      if (typeof window !== 'undefined') {
+        const updated = users.map((u) => (u.id === id ? { ...u, ...data } : u))
+        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+      }
+      throw err
+    }
+  }, [users])
 
-  const deleteUser = (id: string) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id))
-  }
+  const deleteUser = useCallback(async (id: string) => {
+    try {
+      await userAPI.deleteUser(id)
+      setUsers((prev) => prev.filter((u) => u.id !== id))
+      // Atualizar localStorage
+      if (typeof window !== 'undefined') {
+        const updated = users.filter((u) => u.id !== id)
+        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+      }
+    } catch (err: any) {
+      console.error('Erro ao deletar usuário:', err)
+      // Fallback para localStorage
+      setUsers((prev) => prev.filter((u) => u.id !== id))
+      if (typeof window !== 'undefined') {
+        const updated = users.filter((u) => u.id !== id)
+        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+      }
+      throw err
+    }
+  }, [users])
 
   const addPermission = (data: PermissionFormData) => {
     const newPerm: Permission = {
@@ -172,6 +252,8 @@ export function ConfiguracoesProvider({ children }: { children: ReactNode }) {
     setConfiguracoesModalOpen,
     configuracoesModalTab,
     setConfiguracoesModalTab,
+    loading,
+    error,
   }
 
   return (

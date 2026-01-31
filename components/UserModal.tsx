@@ -1,0 +1,206 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import type { User, UserFormData, UserRole } from '@/types/configuracoes'
+
+type UserModalProps = {
+  user?: User | null
+  onClose: () => void
+  onSave: (data: UserFormData) => Promise<void>
+  onDelete?: () => Promise<void>
+}
+
+const ROLES: { value: UserRole; label: string }[] = [
+  { value: 'admin', label: 'Administrador' },
+  { value: 'gerente', label: 'Gerente' },
+  { value: 'usuario', label: 'Usuário' },
+]
+
+export default function UserModal({ user, onClose, onSave, onDelete }: UserModalProps) {
+  const [formData, setFormData] = useState<UserFormData>({
+    nome: '',
+    email: '',
+    role: 'usuario',
+    ativo: true,
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        nome: user.nome,
+        email: user.email,
+        role: user.role,
+        ativo: user.ativo,
+      })
+    } else {
+      setFormData({
+        nome: '',
+        email: '',
+        role: 'usuario',
+        ativo: true,
+      })
+    }
+    setErrors({})
+  }, [user])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [])
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.nome.trim()) {
+      newErrors.nome = 'Nome é obrigatório'
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = 'E-mail é obrigatório'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'E-mail inválido'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (validate()) {
+      try {
+        await onSave(formData)
+      } catch (err: any) {
+        console.error('Erro ao salvar:', err)
+        alert(err.message || 'Erro ao salvar usuário')
+      }
+    }
+  }
+
+  const inputBase = 'w-full rounded-xl border px-4 py-2.5 text-sm outline-none bg-white border-gray-200 focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]/40'
+  const inputError = 'border-red-300'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {user ? 'Editar usuário' : 'Novo usuário'}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+            aria-label="Fechar"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nome <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.nome}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, nome: e.target.value }))
+                if (errors.nome) setErrors((prev) => ({ ...prev, nome: '' }))
+              }}
+              className={`${inputBase} ${errors.nome ? inputError : ''}`}
+              placeholder="Nome completo"
+            />
+            {errors.nome && <p className="mt-1 text-xs text-red-600">{errors.nome}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              E-mail <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, email: e.target.value }))
+                if (errors.email) setErrors((prev) => ({ ...prev, email: '' }))
+              }}
+              className={`${inputBase} ${errors.email ? inputError : ''}`}
+              placeholder="email@exemplo.com"
+            />
+            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Perfil</label>
+            <select
+              value={formData.role}
+              onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value as UserRole }))}
+              className={inputBase}
+            >
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.ativo}
+              onChange={(e) => setFormData((prev) => ({ ...prev, ativo: e.target.checked }))}
+              className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
+            />
+            <span className="text-sm text-gray-700">Usuário ativo</span>
+          </label>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:opacity-90 transition"
+            >
+              {user ? 'Salvar alterações' : 'Adicionar usuário'}
+            </button>
+            {user && onDelete && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (typeof window !== 'undefined' && window.confirm('Tem certeza que deseja remover este usuário?')) {
+                    try {
+                      await onDelete()
+                      onClose()
+                    } catch (err: any) {
+                      console.error('Erro ao deletar:', err)
+                      alert(err.message || 'Erro ao deletar usuário')
+                    }
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white text-red-600 px-4 py-2.5 text-sm font-semibold hover:bg-red-50 transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Remover
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

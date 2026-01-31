@@ -35,7 +35,7 @@ export default function HistoricoPage() {
           onClick={() => setHistoricoModalOpen(true)}
           className="inline-flex items-center gap-2 rounded-xl border-2 border-[var(--primary)] text-[var(--primary)] px-5 py-2.5 text-sm font-semibold hover:bg-[var(--primary)] hover:text-white transition"
         >
-          Ver registro completo no modal
+          Ver registro completo
         </button>
       </div>
     </div>

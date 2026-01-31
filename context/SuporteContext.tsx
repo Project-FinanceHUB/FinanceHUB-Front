@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import type { Mensagem, MensagemFormData } from '@/types/suporte'
+import * as messageAPI from '@/lib/api/messages'
 
 const MENSAGENS_KEY = 'financehub_suporte_mensagens'
 
@@ -13,7 +14,7 @@ const initialMensagens: Mensagem[] = [
     assunto: 'Atualização da sua solicitação #1',
     conteudo: 'Olá! Sua solicitação foi atualizada e está em análise. Em breve retornaremos com mais informações sobre o processamento.',
     remetente: 'Suporte FinanceHub',
-    dataHora: new Date(Date.now() - 3600000).toISOString(), // 1 hora atrás
+    dataHora: new Date(Date.now() - 3600000).toISOString(),
     lida: false,
   },
   {
@@ -39,55 +40,147 @@ const initialMensagens: Mensagem[] = [
 
 type SuporteContextValue = {
   mensagens: Mensagem[]
-  addMensagem: (data: MensagemFormData) => void
-  marcarComoLida: (id: string) => void
-  marcarTodasComoLidas: () => void
+  addMensagem: (data: MensagemFormData) => Promise<void>
+  marcarComoLida: (id: string) => Promise<void>
+  marcarTodasComoLidas: () => Promise<void>
   suporteModalOpen: boolean
   setSuporteModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   suporteModalTab: string
   setSuporteModalTab: React.Dispatch<React.SetStateAction<string>>
+  loading: boolean
+  error: string | null
 }
 
 const SuporteContext = createContext<SuporteContextValue | null>(null)
 
 export function SuporteProvider({ children }: { children: ReactNode }) {
-  const [mensagens, setMensagens] = useState<Mensagem[]>(() => {
-    if (typeof window === 'undefined') return initialMensagens
-    try {
-      const saved = localStorage.getItem(MENSAGENS_KEY)
-      if (saved) return JSON.parse(saved)
-    } catch {}
-    return initialMensagens
-  })
+  const [mensagens, setMensagens] = useState<Mensagem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [suporteModalOpen, setSuporteModalOpen] = useState(false)
   const [suporteModalTab, setSuporteModalTab] = useState('enviar')
 
+  // Carregar mensagens da API
   useEffect(() => {
+    const loadMessages = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await messageAPI.getMessages()
+        setMensagens(data.length > 0 ? data : initialMensagens)
+        // Sincronizar com localStorage como backup
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(MENSAGENS_KEY, JSON.stringify(data.length > 0 ? data : initialMensagens))
+        }
+      } catch (err: any) {
+        console.error('Erro ao carregar mensagens da API:', err)
+        // Fallback para localStorage se API falhar
+        if (typeof window !== 'undefined') {
+          try {
+            const saved = localStorage.getItem(MENSAGENS_KEY)
+            if (saved) {
+              setMensagens(JSON.parse(saved))
+            } else {
+              setMensagens(initialMensagens)
+            }
+          } catch {
+            setMensagens(initialMensagens)
+          }
+        } else {
+          setMensagens(initialMensagens)
+        }
+        setError('Erro ao carregar mensagens. Usando dados locais.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
     if (typeof window !== 'undefined') {
+      loadMessages()
+    } else {
+      setMensagens(initialMensagens)
+      setLoading(false)
+    }
+  }, [])
+
+  // Sincronizar mensagens com localStorage quando mudarem
+  useEffect(() => {
+    if (typeof window !== 'undefined' && mensagens.length > 0) {
       localStorage.setItem(MENSAGENS_KEY, JSON.stringify(mensagens))
     }
   }, [mensagens])
 
-  const addMensagem = useCallback((data: MensagemFormData) => {
-    const now = new Date().toISOString()
-    const nova: Mensagem = {
-      ...data,
-      id: Date.now().toString(),
-      dataHora: now,
-      lida: false,
+  const addMensagem = useCallback(async (data: MensagemFormData) => {
+    try {
+      const nova = await messageAPI.createMessage(data)
+      setMensagens((prev) => [nova, ...prev])
+      // Atualizar localStorage
+      if (typeof window !== 'undefined') {
+        const updated = [nova, ...mensagens]
+        localStorage.setItem(MENSAGENS_KEY, JSON.stringify(updated))
+      }
+    } catch (err: any) {
+      console.error('Erro ao criar mensagem:', err)
+      // Fallback para localStorage
+      const now = new Date().toISOString()
+      const nova: Mensagem = {
+        ...data,
+        id: Date.now().toString(),
+        dataHora: now,
+        lida: false,
+      }
+      setMensagens((prev) => [nova, ...prev])
+      if (typeof window !== 'undefined') {
+        const updated = [nova, ...mensagens]
+        localStorage.setItem(MENSAGENS_KEY, JSON.stringify(updated))
+      }
+      throw err
     }
-    setMensagens((prev) => [nova, ...prev])
-  }, [])
+  }, [mensagens])
 
-  const marcarComoLida = useCallback((id: string) => {
-    setMensagens((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, lida: true } : m))
-    )
-  }, [])
+  const marcarComoLida = useCallback(async (id: string) => {
+    try {
+      await messageAPI.markMessageAsRead(id)
+      setMensagens((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, lida: true } : m))
+      )
+      // Atualizar localStorage
+      if (typeof window !== 'undefined') {
+        const updated = mensagens.map((m) => (m.id === id ? { ...m, lida: true } : m))
+        localStorage.setItem(MENSAGENS_KEY, JSON.stringify(updated))
+      }
+    } catch (err: any) {
+      console.error('Erro ao marcar mensagem como lida:', err)
+      // Fallback para localStorage
+      setMensagens((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, lida: true } : m))
+      )
+      if (typeof window !== 'undefined') {
+        const updated = mensagens.map((m) => (m.id === id ? { ...m, lida: true } : m))
+        localStorage.setItem(MENSAGENS_KEY, JSON.stringify(updated))
+      }
+    }
+  }, [mensagens])
 
-  const marcarTodasComoLidas = useCallback(() => {
-    setMensagens((prev) => prev.map((m) => ({ ...m, lida: true })))
-  }, [])
+  const marcarTodasComoLidas = useCallback(async () => {
+    try {
+      await messageAPI.markAllMessagesAsRead()
+      setMensagens((prev) => prev.map((m) => ({ ...m, lida: true })))
+      // Atualizar localStorage
+      if (typeof window !== 'undefined') {
+        const updated = mensagens.map((m) => ({ ...m, lida: true }))
+        localStorage.setItem(MENSAGENS_KEY, JSON.stringify(updated))
+      }
+    } catch (err: any) {
+      console.error('Erro ao marcar todas como lidas:', err)
+      // Fallback para localStorage
+      setMensagens((prev) => prev.map((m) => ({ ...m, lida: true })))
+      if (typeof window !== 'undefined') {
+        const updated = mensagens.map((m) => ({ ...m, lida: true }))
+        localStorage.setItem(MENSAGENS_KEY, JSON.stringify(updated))
+      }
+    }
+  }, [mensagens])
 
   const value: SuporteContextValue = {
     mensagens,
@@ -98,6 +191,8 @@ export function SuporteProvider({ children }: { children: ReactNode }) {
     setSuporteModalOpen,
     suporteModalTab,
     setSuporteModalTab,
+    loading,
+    error,
   }
 
   return (
