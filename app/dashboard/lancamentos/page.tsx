@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import ResponsiveTable from '@/components/ResponsiveTable'
 import LancamentoModal from '@/components/LancamentoModal'
 import DeleteLancamentoModal from '@/components/DeleteLancamentoModal'
+import { SkeletonCard } from '@/components/Skeleton'
 import type { Lancamento, LancamentoFormData, LancamentoStatus } from '@/types/lancamento'
 
 const STORAGE_KEY = 'financehub_lancamentos'
@@ -132,8 +133,16 @@ export default function LancamentosPage() {
 
   if (!mounted) {
     return (
-      <div className="px-4 sm:px-6 py-6 flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-500 text-sm">Carregando...</div>
+      <div className="px-4 sm:px-6 py-6">
+        <div className="mb-6">
+          <Skeleton variant="text" height={32} width="30%" className="mb-2" />
+          <Skeleton variant="text" height={20} width="50%" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
       </div>
     )
   }

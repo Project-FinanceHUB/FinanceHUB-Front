@@ -13,7 +13,12 @@ export function middleware(request: NextRequest) {
   }
 
   // Se estiver logado e tentar acessar login ou cadastro, redirecionar para dashboard
-  if ((request.nextUrl.pathname === '/' || request.nextUrl.pathname === '/cadastro') && token) {
+  if (request.nextUrl.pathname === '/cadastro' && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+  
+  // Se estiver logado e tentar acessar página de login (?login=true), redirecionar para dashboard
+  if (request.nextUrl.pathname === '/' && token && request.nextUrl.searchParams.get('login') === 'true') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

@@ -1,8 +1,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useDashboard } from '@/context/DashboardContext'
-import { useConfiguracoes } from '@/context/ConfiguracoesContext'
 
 function Icon({ name, className }: { name: string; className?: string }) {
   const cls = `w-8 h-8 ${className ?? ''}`
@@ -49,19 +47,10 @@ function Icon({ name, className }: { name: string; className?: string }) {
   }
 }
 
-const CARDS = [
-  { id: 'perfil', title: 'Perfil', description: 'Atualize seus dados pessoais e informações de contato.', icon: 'user' },
-]
+const CARDS: Array<{ id: string; title: string; description: string; icon: string }> = []
 
 export default function ConfiguracoesPage() {
   const router = useRouter()
-  const { setCompaniesModalOpen } = useDashboard()
-  const { setConfiguracoesModalOpen, setConfiguracoesModalTab } = useConfiguracoes()
-
-  const openConfigModal = (tabId: string) => {
-    setConfiguracoesModalTab(tabId)
-    setConfiguracoesModalOpen(true)
-  }
 
   const handleUsuariosClick = () => {
     router.push('/dashboard/usuarios')
@@ -72,48 +61,21 @@ export default function ConfiguracoesPage() {
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Configurações</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Gerenciamento de usuários e perfil.
+          Gerenciamento de usuários da plataforma.
         </p>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="mt-8">
         <button
           type="button"
           onClick={handleUsuariosClick}
-          className="text-left rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:border-[var(--primary)] hover:shadow-md transition-all group"
+          className="text-left rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:border-[var(--primary)] hover:shadow-md transition-all group w-full max-w-md"
         >
           <div className="w-12 h-12 rounded-xl bg-[var(--secondary)] text-[var(--primary)] flex items-center justify-center mb-4 group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
             <Icon name="users" />
           </div>
           <h3 className="font-semibold text-gray-900">Gerenciamento de usuários</h3>
           <p className="text-sm text-gray-500 mt-1">Adicione, edite e remova usuários da plataforma.</p>
-        </button>
-
-        {CARDS.map((card) => (
-          <button
-            key={card.id}
-            type="button"
-            onClick={() => openConfigModal(card.id)}
-            className="text-left rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:border-[var(--primary)] hover:shadow-md transition-all group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-[var(--secondary)] text-[var(--primary)] flex items-center justify-center mb-4 group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
-              <Icon name={card.icon} />
-            </div>
-            <h3 className="font-semibold text-gray-900">{card.title}</h3>
-            <p className="text-sm text-gray-500 mt-1">{card.description}</p>
-          </button>
-        ))}
-
-        <button
-          type="button"
-          onClick={() => setCompaniesModalOpen(true)}
-          className="text-left rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:border-[var(--primary)] hover:shadow-md transition-all group"
-        >
-          <div className="w-12 h-12 rounded-xl bg-[var(--secondary)] text-[var(--primary)] flex items-center justify-center mb-4 group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
-            <Icon name="companies" />
-          </div>
-          <h3 className="font-semibold text-gray-900">Gerenciar empresas</h3>
-          <p className="text-sm text-gray-500 mt-1">Cadastre e gerencie as empresas vinculadas.</p>
         </button>
       </div>
     </div>

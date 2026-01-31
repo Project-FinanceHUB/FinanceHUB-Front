@@ -6,6 +6,8 @@ import SolicitacaoModal from '@/components/SolicitacaoModal'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal'
 import BoletoPaymentsChart from '@/components/BoletoPaymentsChart'
 import { useDashboard } from '@/context/DashboardContext'
+import { useToast } from '@/context/ToastContext'
+import { Skeleton, SkeletonCard, SkeletonTable } from '@/components/Skeleton'
 import type { Solicitacao, SolicitacaoFormData, SolicitacaoStatus } from '@/types/solicitacao'
 import type { Company, CompanyFormData } from '@/types/company'
 
@@ -13,17 +15,21 @@ function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ')
 }
 
-function Badge({ children, tone }: { children: React.ReactNode; tone: 'gray' | 'green' | 'amber' | 'blue' | 'red' }) {
+function Badge({ children, tone }: { children: React.ReactNode; tone: 'gray' | 'green' | 'amber' | 'blue' | 'red' | 'purple' | 'indigo' | 'emerald' | 'slate' }) {
   const tones: Record<typeof tone, string> = {
-    gray: 'bg-gray-100 text-gray-700 ring-gray-200',
-    green: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    amber: 'bg-amber-50 text-amber-800 ring-amber-200',
-    blue: 'bg-sky-50 text-sky-700 ring-sky-200',
-    red: 'bg-rose-50 text-rose-700 ring-rose-200',
+    gray: 'bg-gray-100 text-gray-700 border-gray-200',
+    green: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    amber: 'bg-amber-50 text-amber-800 border-amber-200',
+    blue: 'bg-sky-50 text-sky-700 border-sky-200',
+    red: 'bg-rose-50 text-rose-700 border-rose-200',
+    purple: 'bg-purple-50 text-purple-700 border-purple-200',
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    slate: 'bg-slate-50 text-slate-700 border-slate-200',
   }
 
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset', tones[tone])}>
+    <span className={cn('inline-flex items-center rounded-xl px-3 py-1.5 text-xs font-semibold border shadow-sm', tones[tone])}>
       {children}
     </span>
   )
@@ -167,7 +173,8 @@ function Icon({ name, className }: { name: string; className?: string }) {
   }
 
 export default function DashboardPage() {
-  const { companies, setCompanies, solicitacoes, setSolicitacoes, addSolicitacao, setCompaniesModalOpen } = useDashboard()
+  const { companies, setCompanies, solicitacoes, setSolicitacoes, addSolicitacao, setCompaniesModalOpen, loading } = useDashboard()
+  const toast = useToast()
   const [mounted, setMounted] = useState(false)
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'em_revisao' | 'fechado'>('todos')
   const [query, setQuery] = useState('')
@@ -201,7 +208,10 @@ export default function DashboardPage() {
     }
   }, [setCompanies])
 
-  const handleCreateSolicitacao = addSolicitacao
+  const handleCreateSolicitacao = (formData: SolicitacaoFormData) => {
+    addSolicitacao(formData)
+    toast.success('Solicitação criada com sucesso!')
+  }
 
   const handleUpdateSolicitacao = (formData: SolicitacaoFormData) => {
     if (!selectedSolicitacao) return
@@ -213,12 +223,14 @@ export default function DashboardPage() {
       )
     )
     setSelectedSolicitacao(undefined)
+    toast.success('Solicitação atualizada com sucesso!')
   }
 
   const handleDeleteSolicitacao = () => {
     if (!solicitacaoToDelete) return
     setSolicitacoes((prev) => prev.filter((sol) => sol.id !== solicitacaoToDelete.id))
     setSolicitacaoToDelete(undefined)
+    toast.success('Solicitação excluída com sucesso!')
   }
 
   const openCreateModal = () => {
@@ -247,14 +259,20 @@ export default function DashboardPage() {
 
   const solicitacoesFiltradas = useMemo(() => {
     const q = query.trim().toLowerCase()
+    const statusLabels: Record<SolicitacaoStatus, string> = {
+      aberto: 'aberto',
+      pendente: 'pendente',
+      em_andamento: 'em andamento',
+      aguardando_validacao: 'aguardando validacao',
+      aprovado: 'aprovado',
+      rejeitado: 'rejeitado',
+      concluido: 'concluido',
+      cancelado: 'cancelado',
+      fechado: 'fechado',
+    }
+    
     const filtered = solicitacoes.filter((t) => {
-      const statusLabel = t.status === 'aberto'
-        ? 'aberto'
-        : t.status === 'pendente'
-        ? 'pendente'
-        : t.status === 'aguardando_validacao'
-        ? 'aguardando validacao'
-        : 'fechado'
+      const statusLabel = statusLabels[t.status] || ''
 
       const matchQuery =
         !q ||
@@ -266,8 +284,8 @@ export default function DashboardPage() {
       const matchStatus =
         statusFiltro === 'todos' ||
         (statusFiltro === 'pendente' && (t.status === 'pendente' || t.status === 'aguardando_validacao')) ||
-        (statusFiltro === 'em_revisao' && t.estagio === 'Em revisão') ||
-        (statusFiltro === 'fechado' && t.status === 'fechado')
+        (statusFiltro === 'em_revisao' && (t.status === 'em_andamento' || t.estagio === 'Em revisão')) ||
+        (statusFiltro === 'fechado' && (t.status === 'fechado' || t.status === 'concluido' || t.status === 'cancelado'))
 
       return matchQuery && matchStatus
     })
@@ -306,32 +324,55 @@ export default function DashboardPage() {
 
   const totals = useMemo(() => {
     const boletosEmAberto = 3
-    const solicitacoesPendentes = solicitacoes.filter((t) => t.status === 'pendente' || t.status === 'aguardando_validacao').length
+    const solicitacoesPendentes = solicitacoes.filter((t) => 
+      t.status === 'pendente' || 
+      t.status === 'aguardando_validacao' || 
+      t.status === 'em_andamento'
+    ).length
     const mensagensNaoLidas = 2
     return { boletosEmAberto, solicitacoesPendentes, mensagensNaoLidas }
   }, [solicitacoes])
 
-  if (!mounted) {
+  if (!mounted || loading) {
     return (
-      <div className="px-4 sm:px-6 py-6 flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-500 text-sm">Carregando dashboard...</div>
+      <div className="px-4 sm:px-6 lg:px-8 py-8">
+        {/* Headline Skeleton */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
+          <div className="flex-1">
+            <Skeleton variant="text" height={36} width="40%" className="mb-2" />
+            <Skeleton variant="text" height={20} width="60%" />
+          </div>
+          <Skeleton variant="rounded" height={44} width={180} />
+        </div>
+
+        {/* Summary Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+
+        {/* Table Skeleton */}
+        <div className="rounded-2xl bg-white border border-gray-200 shadow-lg overflow-hidden p-6">
+          <SkeletonTable rows={5} cols={4} />
+        </div>
       </div>
     )
   }
 
   return (
     <>
-      <div className="px-4 sm:px-6 py-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-8">
             {/* Headline + Quick actions */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
               <div>
-                <h1 className="text-2xl font-semibold">Solicitações</h1>
-                <p className="text-sm text-gray-500">Visão centralizada de suporte, comunicação e pendências financeiras.</p>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Solicitações</h1>
+                <p className="text-base text-gray-600">Visão centralizada de suporte, comunicação e pendências financeiras.</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={openCreateModal}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-[var(--accent)] transition"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] text-white px-6 py-3 text-sm font-semibold shadow-lg hover:bg-[var(--accent)] hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
                 >
                   <Icon name="plus" className="w-5 h-5" />
                   Abrir solicitação
@@ -339,7 +380,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setCompaniesModalOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                  className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-[var(--primary)]/30 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   <Icon name="settings" className="w-5 h-5" />
                   Gerenciar empresas
@@ -348,42 +389,45 @@ export default function DashboardPage() {
             </div>
 
             {/* Summary cards */}
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
-                <div className="flex items-center justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <div className="group relative rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:shadow-xl hover:border-[var(--primary)]/30 transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-gray-500">Boletos em aberto</div>
-                    <div className="text-3xl font-semibold mt-1">{totals.boletosEmAberto}</div>
+                    <div className="text-sm font-medium text-gray-600 mb-1">Boletos em aberto</div>
+                    <div className="text-4xl font-bold text-gray-900 mt-2">{totals.boletosEmAberto}</div>
                   </div>
-                  <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center ring-1 ring-emerald-100">
-                    <Icon name="bill" />
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Icon name="bill" className="w-7 h-7" />
                   </div>
                 </div>
-                <div className="mt-3 text-xs text-gray-500">Acompanhe status e baixe PDFs rapidamente.</div>
+                <div className="mt-4 text-sm text-gray-600">Acompanhe status e baixe PDFs rapidamente.</div>
               </div>
-              <div className="rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
-                <div className="flex items-center justify-between">
+              <div className="group relative rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:shadow-xl hover:border-[var(--primary)]/30 transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-gray-500">Solicitações pendentes</div>
-                    <div className="text-3xl font-semibold mt-1">{totals.solicitacoesPendentes}</div>
+                    <div className="text-sm font-medium text-gray-600 mb-1">Solicitações pendentes</div>
+                    <div className="text-4xl font-bold text-gray-900 mt-2">{totals.solicitacoesPendentes}</div>
                   </div>
-                  <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-800 flex items-center justify-center ring-1 ring-amber-100">
-                    <Icon name="solicitacao" />
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 text-amber-800 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Icon name="solicitacao" className="w-7 h-7" />
                   </div>
                 </div>
-                <div className="mt-3 text-xs text-gray-500">Priorize o que precisa de validação.</div>
+                <div className="mt-4 text-sm text-gray-600">Priorize o que precisa de validação.</div>
               </div>
-              <div className="rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
-                <div className="flex items-center justify-between">
+              <div className="group relative rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:shadow-xl hover:border-[var(--primary)]/30 transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-sky-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-gray-500">Mensagens não lidas</div>
-                    <div className="text-3xl font-semibold mt-1">{totals.mensagensNaoLidas}</div>
+                    <div className="text-sm font-medium text-gray-600 mb-1">Mensagens não lidas</div>
+                    <div className="text-4xl font-bold text-gray-900 mt-2">{totals.mensagensNaoLidas}</div>
                   </div>
-                  <div className="w-11 h-11 rounded-2xl bg-sky-50 text-sky-700 flex items-center justify-center ring-1 ring-sky-100">
-                    <Icon name="inbox" />
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-100 to-sky-50 text-sky-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Icon name="inbox" className="w-7 h-7" />
                   </div>
                 </div>
-                <div className="mt-3 text-xs text-gray-500">Respostas do suporte e avisos do sistema.</div>
+                <div className="mt-4 text-sm text-gray-600">Respostas do suporte e avisos do sistema.</div>
               </div>
             </div>
 
@@ -393,28 +437,28 @@ export default function DashboardPage() {
             </div>
 
             {/* Tabela de solicitações */}
-            <div className="mt-6 rounded-2xl bg-white border border-gray-200 shadow-sm">
-              <div className="p-4 sm:p-5 space-y-3">
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-lg overflow-hidden">
+              <div className="p-6 space-y-4">
                 {/* Busca + tamanho da página */}
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      <Icon name="search" className="w-4 h-4" />
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="relative flex-1 w-full">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Icon name="search" className="w-5 h-5" />
                     </span>
                     <input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Pesquisar por ID, razão social ou CNPJ..."
-                      className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal/40"
+                      className="w-full rounded-xl border-2 border-gray-200 bg-white text-gray-900 pl-12 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all shadow-sm hover:shadow-md"
                     />
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 whitespace-nowrap">Exibir</span>
+                    <span className="text-sm text-gray-600 whitespace-nowrap font-medium">Exibir</span>
                     <select
                       value={pageSize}
                       onChange={(e) => setPageSize(Number(e.target.value) as 10 | 20 | 30 | 50)}
-                      className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal/40"
+                      className="rounded-xl border-2 border-gray-200 bg-white text-gray-900 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all shadow-sm hover:shadow-md"
                     >
                       <option value={10}>10 itens</option>
                       <option value={20}>20 itens</option>
@@ -425,15 +469,15 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Filtros de status */}
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => setStatusFiltro('todos')}
                     className={cn(
-                      'rounded-xl px-3 py-2 text-sm font-semibold border',
+                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]',
                       statusFiltro === 'todos'
-                        ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
-                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                        ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-[var(--primary)]/30 hover:bg-gray-50'
                     )}
                   >
                     Todos abertos
@@ -442,37 +486,37 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setStatusFiltro('pendente')}
                     className={cn(
-                      'rounded-xl px-3 py-2 text-sm font-semibold border',
+                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]',
                       statusFiltro === 'pendente'
-                        ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
-                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                        ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-[var(--primary)]/30 hover:bg-gray-50'
                     )}
                   >
-                    Solicitações pendentes
+                    Pendentes
                   </button>
                   <button
                     type="button"
                     onClick={() => setStatusFiltro('em_revisao')}
                     className={cn(
-                      'rounded-xl px-3 py-2 text-sm font-semibold border',
+                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]',
                       statusFiltro === 'em_revisao'
-                        ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
-                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                        ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-[var(--primary)]/30 hover:bg-gray-50'
                     )}
                   >
-                    Em revisão
+                    Em Andamento
                   </button>
                   <button
                     type="button"
                     onClick={() => setStatusFiltro('fechado')}
                     className={cn(
-                      'rounded-xl px-3 py-2 text-sm font-semibold border',
+                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]',
                       statusFiltro === 'fechado'
-                        ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
-                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                        ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-[var(--primary)]/30 hover:bg-gray-50'
                     )}
                   >
-                    Fechados
+                    Concluídos
                   </button>
                 </div>
               </div>
@@ -480,40 +524,54 @@ export default function DashboardPage() {
               <ResponsiveTable
                 aria-label="Tabela de solicitações"
                 columns={[
-                  { key: 'numero', label: 'Número/ID', cellClassName: 'font-semibold text-teal-dark' },
-                  { key: 'titulo', label: 'Razão Social', cellClassName: 'text-gray-900' },
-                  { key: 'origem', label: 'CNPJ', cellClassName: 'text-gray-600' },
-                  { key: 'status' as any, label: 'Status' },
-                  { key: 'acoes' as any, label: 'Ações' },
+                  { key: 'numero', label: 'Número/ID', headerClassName: 'text-center', cellClassName: 'font-bold text-[var(--primary)] text-center' },
+                  { key: 'titulo', label: 'Razão Social', headerClassName: 'text-center', cellClassName: 'font-medium text-gray-900 text-center' },
+                  { key: 'origem', label: 'CNPJ', headerClassName: 'text-center', cellClassName: 'text-gray-600 text-center' },
+                  { key: 'status' as any, label: 'Status', headerClassName: 'text-center', cellClassName: 'text-center' },
+                  { key: 'acoes' as any, label: 'Ações', headerClassName: 'text-center', cellClassName: 'text-center' },
                 ]}
                 rows={solicitacoesVisiveis as any}
                 renderCell={(row, key) => {
                   const t = row as Solicitacao
                   const columnKey = key as string
 
-                  const statusTone: Record<SolicitacaoStatus, 'green' | 'amber' | 'blue' | 'gray'> = {
+                  const statusTone: Record<SolicitacaoStatus, 'green' | 'amber' | 'blue' | 'gray' | 'purple' | 'indigo' | 'emerald' | 'red' | 'slate'> = {
                     aberto: 'green',
                     pendente: 'amber',
-                    aguardando_validacao: 'blue',
-                    fechado: 'gray',
+                    em_andamento: 'purple',
+                    aguardando_validacao: 'indigo',
+                    aprovado: 'emerald',
+                    rejeitado: 'red',
+                    concluido: 'green',
+                    cancelado: 'gray',
+                    fechado: 'slate',
                   }
                   const statusLabel: Record<SolicitacaoStatus, string> = {
                     aberto: 'Aberto',
                     pendente: 'Pendente',
-                    aguardando_validacao: 'Aguardando validação',
+                    em_andamento: 'Em Andamento',
+                    aguardando_validacao: 'Aguardando Validação',
+                    aprovado: 'Aprovado',
+                    rejeitado: 'Rejeitado',
+                    concluido: 'Concluído',
+                    cancelado: 'Cancelado',
                     fechado: 'Fechado',
                   }
 
                   if (columnKey === 'status') {
-                    return <Badge tone={statusTone[t.status]}>{statusLabel[t.status]}</Badge>
+                    return (
+                      <div className="flex justify-center">
+                        <Badge tone={statusTone[t.status]}>{statusLabel[t.status]}</Badge>
+                      </div>
+                    )
                   }
 
                   if (columnKey === 'acoes') {
                     return (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => openEditModal(t)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:text-[var(--primary)] hover:bg-[rgba(3,154,66,0.08)] transition"
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-all duration-200 shadow-sm hover:shadow-md"
                           aria-label="Editar registro"
                           title="Editar registro"
                         >
@@ -521,7 +579,7 @@ export default function DashboardPage() {
                         </button>
                         <button
                           onClick={() => openDeleteModal(t)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition"
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200 shadow-sm hover:shadow-md"
                           aria-label="Excluir registro"
                           title="Excluir registro"
                         >
@@ -536,8 +594,12 @@ export default function DashboardPage() {
               />
 
               {solicitacoesVisiveis.length === 0 && (
-                <div className="px-5 py-10 text-center text-gray-500 text-sm">
-                  Nenhuma solicitação encontrada para o filtro/pesquisa atual.
+                <div className="px-6 py-16 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Icon name="solicitacao" className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600 font-medium">Nenhuma solicitação encontrada</p>
+                  <p className="text-sm text-gray-500 mt-1">Tente ajustar os filtros ou a pesquisa.</p>
                 </div>
               )}
             </div>

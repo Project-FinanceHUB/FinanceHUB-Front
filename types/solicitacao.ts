@@ -1,4 +1,13 @@
-export type SolicitacaoStatus = 'aberto' | 'pendente' | 'aguardando_validacao' | 'fechado'
+export type SolicitacaoStatus = 
+  | 'aberto' 
+  | 'pendente' 
+  | 'em_andamento' 
+  | 'aguardando_validacao' 
+  | 'aprovado' 
+  | 'rejeitado' 
+  | 'concluido' 
+  | 'cancelado' 
+  | 'fechado'
 export type SolicitacaoPriority = 'baixa' | 'media' | 'alta'
 export type SolicitacaoStage = 'Pendente' | 'Em revisão' | 'Aguardando validação' | 'Fechado'
 

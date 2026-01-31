@@ -11,6 +11,7 @@ import HistoricoModal from '@/components/HistoricoModal'
 import SuporteModal from '@/components/SuporteModal'
 import NotificacoesDropdown from '@/components/NotificacoesDropdown'
 import UserAvatarDropdown from '@/components/UserAvatarDropdown'
+import PerfilModal from '@/components/PerfilModal'
 import Footer from '@/components/Footer'
 import { useDashboard } from '@/context/DashboardContext'
 import { useSuporte } from '@/context/SuporteContext'
@@ -111,20 +112,25 @@ function SidebarItem({
   onMobileClick?: () => void
 }) {
   const baseClass = cn(
-    'w-full flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 relative group',
-    active ? 'bg-white/15 text-white shadow-sm' : 'text-white/85 hover:text-white hover:bg-white/10',
+    'w-full flex items-center rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 relative group',
+    active 
+      ? 'bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/20' 
+      : 'text-white/85 hover:text-white hover:bg-white/10 hover:shadow-md',
     isCollapsed ? 'justify-center' : 'gap-3'
   )
   const content = (
     <>
-      <span className={cn('flex-shrink-0', active ? 'opacity-100' : 'opacity-90')}>
+      <span className={cn('flex-shrink-0 transition-transform', active ? 'opacity-100 scale-110' : 'opacity-90 group-hover:scale-110')}>
         <Icon name={icon} />
       </span>
-      {!isCollapsed && <span className="truncate">{label}</span>}
+      {!isCollapsed && <span className="truncate font-medium">{label}</span>}
       {isCollapsed && (
-        <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity shadow-lg">
+        <span className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity shadow-xl font-medium">
           {label}
         </span>
+      )}
+      {active && !isCollapsed && (
+        <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-white/80 shadow-sm" />
       )}
     </>
   )
@@ -156,6 +162,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [isSolicitacaoModalOpen, setIsSolicitacaoModalOpen] = useState(false)
   const [isNotificacoesOpen, setIsNotificacoesOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isPerfilModalOpen, setIsPerfilModalOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
   const mensagensNaoLidas = mensagens.filter((m) => !m.lida && m.direcao === 'recebida').length
@@ -186,10 +193,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, [isMobileMenuOpen])
 
   return (
-    <div className="min-h-screen bg-brand-5 text-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden transition-opacity duration-200"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-hidden
         />
@@ -198,26 +205,32 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <div className="flex min-h-screen">
         <aside
           className={cn(
-            'flex flex-col fixed inset-y-0 bg-gradient-to-b from-[var(--primary)] via-[var(--accent)] to-[var(--primary)] text-white transition-all duration-300 z-50 overflow-x-hidden',
+            'flex flex-col fixed inset-y-0 bg-gradient-to-b from-[var(--primary)] via-[var(--accent)] to-[var(--primary)] text-white transition-all duration-300 z-50 overflow-x-hidden shadow-2xl',
             'w-72',
-            isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
-            'md:translate-x-0',
+            isMobileMenuOpen ? 'translate-x-0 rounded-r-2xl' : '-translate-x-full',
+            'md:translate-x-0 md:rounded-r-2xl',
             isSidebarCollapsed ? 'md:w-20' : 'md:w-72'
           )}
         >
-          <div className={cn('h-16 flex items-center border-b border-white/10 transition-all duration-300', isSidebarCollapsed ? 'md:px-3 md:justify-center px-6 gap-3' : 'px-6 gap-3')}>
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center ring-1 ring-white/15 flex-shrink-0 overflow-hidden">
+          {/* Decorative elements */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+          </div>
+
+          <div className={cn('relative h-20 flex items-center border-b border-white/10 transition-all duration-300', isSidebarCollapsed ? 'md:px-3 md:justify-center px-6 gap-3' : 'px-6 gap-3')}>
+            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/20 flex-shrink-0 overflow-hidden shadow-lg">
               <Image src="/logo.png" alt="FinanceHub Logo" width={40} height={40} className="w-full h-full object-contain" />
             </div>
             {!isSidebarCollapsed && (
               <div className="leading-tight">
-                <div className="font-semibold">FinanceHub</div>
-                <div className="text-xs text-white/70">Painel do Cliente</div>
+                <div className="font-bold text-lg">FinanceHub</div>
+                <div className="text-xs text-white/80 font-medium">Painel do Cliente</div>
               </div>
             )}
           </div>
 
-          <div className={cn('transition-all duration-300', isSidebarCollapsed ? 'md:p-2 p-4' : 'p-4')}>
+          <div className={cn('relative transition-all duration-300', isSidebarCollapsed ? 'md:p-2 p-4' : 'p-4')}>
             <button
               type="button"
               onClick={() => {
@@ -225,37 +238,36 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 setIsSolicitacaoModalOpen(true)
               }}
               className={cn(
-                'w-full inline-flex items-center rounded-xl border border-[var(--primary)] bg-white text-[var(--primary)] font-semibold shadow-sm hover:bg-[var(--secondary)] transition relative group',
-                isSidebarCollapsed ? 'md:justify-center md:px-2 md:gap-0 gap-2 px-4 py-3' : 'justify-center gap-2 px-4 py-3'
+                'w-full inline-flex items-center rounded-xl bg-white text-[var(--primary)] font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 relative group',
+                isSidebarCollapsed ? 'md:justify-center md:px-2 md:gap-0 gap-2 px-4 py-3' : 'justify-center gap-2 px-4 py-3.5'
               )}
               title={isSidebarCollapsed ? 'Abrir nova solicitação' : undefined}
             >
               <Icon name="plus" className="w-5 h-5" />
               {!isSidebarCollapsed && <span>Abrir nova solicitação</span>}
               {isSidebarCollapsed && (
-                <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                <span className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity shadow-xl">
                   Abrir nova solicitação
                 </span>
               )}
             </button>
           </div>
 
-          <nav className={cn('flex flex-col flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300', isSidebarCollapsed ? 'md:px-2 px-4' : 'px-4')}>
-            <div className="space-y-1">
+          <nav className={cn('relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300', isSidebarCollapsed ? 'md:px-2 px-4' : 'px-4')}>
+            <div className="space-y-2">
               {!isSidebarCollapsed && (
-                <div className="px-3 pt-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-white/60">
+                <div className="px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-wider text-white/70">
                   Gestão Financeira
                 </div>
               )}
               <SidebarItem icon="dashboard" label="Dashboard" href="/dashboard" active={pathname === '/dashboard'} isCollapsed={isSidebarCollapsed} onMobileClick={() => setIsMobileMenuOpen(false)} />
-              <SidebarItem icon="lancamentos" label="Lançamentos Financeiros" href="/dashboard/lancamentos" active={pathname === '/dashboard/lancamentos'} isCollapsed={isSidebarCollapsed} onMobileClick={() => setIsMobileMenuOpen(false)} />
               <SidebarItem icon="historico" label="Histórico" href="/dashboard/historico" active={pathname === '/dashboard/historico'} isCollapsed={isSidebarCollapsed} onMobileClick={() => setIsMobileMenuOpen(false)} />
-              <SidebarItem icon="companies" label="Gerenciar empresas" onClick={() => setCompaniesModalOpen(true)} isCollapsed={isSidebarCollapsed} onMobileClick={() => setIsMobileMenuOpen(false)} />
+              <SidebarItem icon="companies" label="Gerenciar empresas" href="/dashboard/empresas" active={pathname === '/dashboard/empresas'} isCollapsed={isSidebarCollapsed} onMobileClick={() => setIsMobileMenuOpen(false)} />
             </div>
 
-            <div className={cn('mt-auto pt-4 pb-6 space-y-1', !isSidebarCollapsed && 'border-t border-white/10')}>
+            <div className={cn('mt-auto pt-6 pb-6 space-y-2', !isSidebarCollapsed && 'border-t border-white/10')}>
               {!isSidebarCollapsed && (
-                <div className="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-white/60">
+                <div className="px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-wider text-white/70">
                   Conta e Suporte
                 </div>
               )}
@@ -266,12 +278,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </aside>
 
         <main className={cn('flex-1 transition-all duration-300 w-full flex flex-col', isSidebarCollapsed ? 'md:ml-20' : 'md:ml-72')}>
-          <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200">
-            <div className="h-16 px-4 sm:px-6 flex items-center gap-3">
+          <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
+            <div className="h-20 px-4 sm:px-6 lg:px-8 flex items-center gap-4">
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+                className="hidden md:flex items-center justify-center w-11 h-11 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-[var(--primary)]/30 transition-all duration-200 shadow-sm hover:shadow-md"
                 aria-label={isSidebarCollapsed ? 'Expandir menu' : 'Colapsar menu'}
                 title={isSidebarCollapsed ? 'Expandir menu' : 'Colapsar menu'}
               >
@@ -279,24 +291,30 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               </button>
 
               <div className="md:hidden flex items-center gap-3">
-                <button type="button" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-50" aria-label="Menu">
+                <button 
+                  type="button" 
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+                  className="flex items-center justify-center w-11 h-11 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-all shadow-sm" 
+                  aria-label="Menu"
+                >
                   <Icon name="menu" className="w-5 h-5 text-gray-700" />
                 </button>
-                <div className="w-10 h-10 rounded-xl bg-[var(--primary)] text-white flex items-center justify-center overflow-hidden">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center overflow-hidden shadow-lg">
                   <Image src="/logo.png" alt="FinanceHub Logo" width={40} height={40} className="w-full h-full object-contain" />
                 </div>
               </div>
 
               <div className="flex items-center gap-3 ml-auto">
+                {/* Notificações */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={handleNotificacaoClick}
                     className={cn(
-                      'relative inline-flex items-center justify-center w-10 h-10 rounded-xl border transition',
+                      'relative inline-flex items-center justify-center w-11 h-11 rounded-xl border transition-all duration-200 shadow-sm hover:shadow-md',
                       isNotificacoesOpen
-                        ? 'border-[var(--primary)] bg-[var(--secondary)]/30'
-                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                        ? 'border-[var(--primary)] bg-[var(--primary)]/10 shadow-md'
+                        : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-[var(--primary)]/30'
                     )}
                     aria-label="Notificações do suporte"
                     title={isMounted && mensagensNaoLidas > 0 ? `${mensagensNaoLidas} mensagem(ns) não lida(s)` : 'Notificações'}
@@ -305,7 +323,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                       <Icon name="bell" />
                     </span>
                     {mensagensNaoLidas > 0 && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white text-xs font-bold flex items-center justify-center shadow-lg ring-2 ring-white">
                         {mensagensNaoLidas}
                       </span>
                     )}
@@ -317,24 +335,24 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     type="button"
                     onClick={handleUserMenuClick}
                     className={cn(
-                      'inline-flex items-center gap-3 rounded-xl border px-3 py-2 transition-colors',
+                      'inline-flex items-center gap-3 rounded-xl border px-4 py-2.5 transition-all duration-200 shadow-sm hover:shadow-md',
                       isUserMenuOpen
-                        ? 'border-[var(--primary)] bg-[var(--secondary)]/30'
-                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                        ? 'border-[var(--primary)] bg-[var(--primary)]/10 shadow-md'
+                        : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-[var(--primary)]/30'
                     )}
                   >
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center font-semibold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center font-semibold text-sm shadow-lg ring-2 ring-white">
                       {user?.nome?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <div className="hidden sm:block text-left leading-tight">
-                      <div className="text-sm font-semibold">{user?.nome || 'Usuário'}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-sm font-semibold text-gray-900">{user?.nome || 'Usuário'}</div>
+                      <div className="text-xs text-gray-500 font-medium">
                         {user?.role === 'admin' ? 'Administrador' : user?.role === 'gerente' ? 'Gerente' : user?.role === 'usuario' ? 'Usuário' : 'Cliente'}
                       </div>
                     </div>
                     <svg
                       className={cn(
-                        'w-4 h-4 text-gray-400 transition-transform',
+                        'w-4 h-4 text-gray-400 transition-transform duration-200',
                         isUserMenuOpen && 'rotate-180'
                       )}
                       fill="none"
@@ -344,13 +362,20 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  <UserAvatarDropdown isOpen={isUserMenuOpen} onClose={() => setIsUserMenuOpen(false)} />
+                  <UserAvatarDropdown 
+                    isOpen={isUserMenuOpen} 
+                    onClose={() => setIsUserMenuOpen(false)}
+                    onOpenPerfil={() => {
+                      setIsPerfilModalOpen(true)
+                      setIsUserMenuOpen(false)
+                    }}
+                  />
                 </div>
               </div>
             </div>
           </header>
 
-          <div className="flex-1">
+          <div className="flex-1 bg-gradient-to-br from-gray-50 via-white to-gray-50">
             {children}
           </div>
 
@@ -386,6 +411,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <ConfiguracoesModal />
       <HistoricoModal />
       <SuporteModal />
+      <PerfilModal isOpen={isPerfilModalOpen} onClose={() => setIsPerfilModalOpen(false)} />
     </div>
   )
 }

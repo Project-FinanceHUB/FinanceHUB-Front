@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useConfiguracoes } from '@/context/ConfiguracoesContext'
+import { SkeletonCard } from '@/components/Skeleton'
 import type { User, UserFormData, UserRole } from '@/types/configuracoes'
 import UserModal from '@/components/UserModal'
 
@@ -130,8 +131,10 @@ export default function UsuariosPage() {
 
       {/* Loading State */}
       {loading && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Carregando usuários...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       )}
 

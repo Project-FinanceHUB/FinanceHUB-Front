@@ -54,7 +54,7 @@ export default function BrandingPanel() {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gold">FinanceHub</h1>
+            <h1 className="text-2xl font-bold text-gold">FinanceHUB</h1>
             <p className="text-sm text-gray-400">Consultoria em Telecom & TI</p>
           </div>
         </div>

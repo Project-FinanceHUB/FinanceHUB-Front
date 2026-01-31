@@ -53,19 +53,21 @@ export default function ResponsiveTable<Row extends Record<string, any>>({
           ' [&_thead]:sr-only md:[&_thead]:not-sr-only',
           // tr: cards em mobile, linhas normais em desktop
           ' [&_tbody_tr]:block md:[&_tbody_tr]:table-row',
-          ' [&_tbody_tr]:border [&_tbody_tr]:border-gray-200 [&_tbody_tr]:rounded-lg [&_tbody_tr]:shadow-sm',
+          ' [&_tbody_tr]:border [&_tbody_tr]:border-gray-200 [&_tbody_tr]:rounded-xl [&_tbody_tr]:shadow-sm',
           ' [&_tbody_tr]:p-4 [&_tbody_tr]:bg-white [&_tbody_tr]:mb-3',
+          ' [&_tbody_tr]:transition-all [&_tbody_tr]:duration-200 [&_tbody_tr]:hover:shadow-md [&_tbody_tr]:hover:border-[var(--primary)]/20',
           ' md:[&_tbody_tr]:border-0 md:[&_tbody_tr]:rounded-none md:[&_tbody_tr]:shadow-none md:[&_tbody_tr]:p-0 md:[&_tbody_tr]:bg-transparent md:[&_tbody_tr]:mb-0',
           // td: coluna única no mobile, células na horizontal em desktop
           ' [&_tbody_td]:flex [&_tbody_td]:flex-col [&_tbody_td]:gap-1 md:[&_tbody_td]:table-cell',
-          ' [&_tbody_td]:px-0 [&_tbody_td]:py-0 md:[&_tbody_td]:px-5 md:[&_tbody_td]:py-4',
+          ' [&_tbody_td]:px-0 [&_tbody_td]:py-0 md:[&_tbody_td]:px-6 md:[&_tbody_td]:py-4',
           // label da coluna (data-label) antes do valor no mobile
           " [&_tbody_td]:before:content-[attr(data-label)] md:[&_tbody_td]:before:content-none",
-          ' [&_tbody_td]:before:text-sm [&_tbody_td]:before:font-medium [&_tbody_td]:before:text-gray-500',
+          ' [&_tbody_td]:before:text-sm [&_tbody_td]:before:font-semibold [&_tbody_td]:before:text-gray-600',
           // head padrão em desktop
-          ' md:[&_thead_tr]:bg-gray-50 md:[&_thead_tr]:text-gray-600',
-          ' md:[&_thead_th]:text-left md:[&_thead_th]:font-semibold md:[&_thead_th]:px-5 md:[&_thead_th]:py-3',
-          ' md:[&_tbody]:divide-y md:[&_tbody]:divide-gray-100'
+          ' md:[&_thead_tr]:bg-gradient-to-r md:[&_thead_tr]:from-gray-50 md:[&_thead_tr]:to-gray-50/50 md:[&_thead_tr]:text-gray-700',
+          ' md:[&_thead_th]:font-bold md:[&_thead_th]:px-6 md:[&_thead_th]:py-4 md:[&_thead_th]:text-sm',
+          ' md:[&_tbody]:divide-y md:[&_tbody]:divide-gray-100',
+          ' md:[&_tbody_tr]:hover:bg-gray-50/80 md:[&_tbody_tr]:transition-colors md:[&_tbody_tr]:duration-150'
         )}
       >
         <thead>
@@ -73,7 +75,7 @@ export default function ResponsiveTable<Row extends Record<string, any>>({
             {columns.map((column) => (
               <th
                 key={column.key}
-                className={cn('text-left font-semibold px-5 py-3', column.headerClassName)}
+                className={cn('font-semibold px-5 py-3 text-center', column.headerClassName)}
                 scope="col"
               >
                 {column.label}
@@ -92,7 +94,7 @@ export default function ResponsiveTable<Row extends Record<string, any>>({
                 <td
                   key={column.key}
                   data-label={column.label}
-                  className={cn('px-5 py-4 text-gray-700', column.cellClassName)}
+                  className={cn('px-6 py-4 text-gray-700', column.cellClassName)}
                 >
                   {renderCell ? renderCell(row, column.key) : String((row as any)[column.key] ?? '')}
                 </td>
