@@ -225,9 +225,9 @@ export default function HeroSection() {
         setRole('usuario')
         router.push('/?cadastro=sucesso')
       }, 2000)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao cadastrar:', error)
-      const errorMessage = error.message || 'Erro ao criar conta. Tente novamente.'
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.'
       setErroSignup(errorMessage)
       setIsSubmitting(false)
       toast.error(errorMessage)

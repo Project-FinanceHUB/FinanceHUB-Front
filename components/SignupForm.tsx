@@ -48,9 +48,10 @@ export default function SignupForm() {
       setTimeout(() => {
         router.push('/?cadastro=sucesso')
       }, 2000)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao cadastrar:', error)
-      setErro(error.message || 'Erro ao criar conta. Tente novamente.')
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.'
+      setErro(errorMessage)
       setIsSubmitting(false)
     }
   }

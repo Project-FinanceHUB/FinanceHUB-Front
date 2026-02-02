@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import ResponsiveTable from '@/components/ResponsiveTable'
 import SolicitacaoModal from '@/components/SolicitacaoModal'
+import SolicitacaoDetalhesModal from '@/components/SolicitacaoDetalhesModal'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal'
 import BoletoPaymentsChart from '@/components/BoletoPaymentsChart'
 import { useDashboard } from '@/context/DashboardContext'
@@ -182,8 +183,10 @@ export default function DashboardPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [pageSize, setPageSize] = useState<10 | 20 | 30 | 50>(10)
   const [isSolicitacaoModalOpen, setIsSolicitacaoModalOpen] = useState(false)
+  const [isDetalhesModalOpen, setIsDetalhesModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedSolicitacao, setSelectedSolicitacao] = useState<Solicitacao | undefined>()
+  const [solicitacaoDetalhes, setSolicitacaoDetalhes] = useState<Solicitacao | null>(null)
   const [solicitacaoToDelete, setSolicitacaoToDelete] = useState<Solicitacao | undefined>()
 
   useEffect(() => {
@@ -246,6 +249,11 @@ export default function DashboardPage() {
   const openDeleteModal = (solicitacao: Solicitacao) => {
     setSolicitacaoToDelete(solicitacao)
     setIsDeleteModalOpen(true)
+  }
+
+  const openDetalhesModal = (solicitacao: Solicitacao) => {
+    setSolicitacaoDetalhes(solicitacao)
+    setIsDetalhesModalOpen(true)
   }
 
   const handleSolicitacaoSubmit = (formData: SolicitacaoFormData) => {
@@ -560,8 +568,25 @@ export default function DashboardPage() {
 
                   if (columnKey === 'status') {
                     return (
-                      <div className="flex justify-center">
+                      <div className="flex justify-center items-center gap-2">
                         <Badge tone={statusTone[t.status]}>{statusLabel[t.status]}</Badge>
+                        <div className="flex items-center gap-1">
+                          {t.visualizado && (
+                            <span className="inline-flex items-center" title="Visualizado pelo suporte">
+                              <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.523 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                              </svg>
+                            </span>
+                          )}
+                          {t.respondido && (
+                            <span className="inline-flex items-center" title="Respondido pelo suporte">
+                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )
                   }
@@ -569,6 +594,17 @@ export default function DashboardPage() {
                   if (columnKey === 'acoes') {
                     return (
                       <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => openDetalhesModal(t)}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                          aria-label="Ver detalhes"
+                          title="Ver detalhes"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
                         <button
                           onClick={() => openEditModal(t)}
                           className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-all duration-200 shadow-sm hover:shadow-md"
@@ -606,6 +642,14 @@ export default function DashboardPage() {
           </div>
 
       {/* Modais */}
+      <SolicitacaoDetalhesModal
+        isOpen={isDetalhesModalOpen}
+        solicitacao={solicitacaoDetalhes}
+        onClose={() => {
+          setIsDetalhesModalOpen(false)
+          setSolicitacaoDetalhes(null)
+        }}
+      />
       <SolicitacaoModal
         isOpen={isSolicitacaoModalOpen}
         solicitacao={selectedSolicitacao}

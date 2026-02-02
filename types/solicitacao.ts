@@ -20,8 +20,13 @@ export type Solicitacao = {
   status: SolicitacaoStatus
   estagio: SolicitacaoStage
   descricao?: string
+  mensagem?: string
   boleto?: File | string
   notaFiscal?: File | string
+  visualizado?: boolean
+  visualizadoEm?: string
+  respondido?: boolean
+  respondidoEm?: string
   dataCriacao?: string
   dataAtualizacao?: string
 }

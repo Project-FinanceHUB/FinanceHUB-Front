@@ -58,9 +58,10 @@ export default function SignupHero() {
       setTimeout(() => {
         router.push('/?cadastro=sucesso')
       }, 2000)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao cadastrar:', error)
-      setErro(error.message || 'Erro ao criar conta. Tente novamente.')
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.'
+      setErro(errorMessage)
       setIsSubmitting(false)
     }
   }
@@ -425,7 +426,7 @@ export default function SignupHero() {
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Produto</h3>
               <ul className="space-y-3">
-                                <li>
+                <li>
                   <a href="#features" className="text-sm text-gray-600 hover:text-[var(--primary)] transition-colors">
                     Funcionalidades
                   </a>
