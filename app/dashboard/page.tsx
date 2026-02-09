@@ -385,14 +385,6 @@ export default function DashboardPage() {
                   <Icon name="plus" className="w-5 h-5" />
                   Abrir solicitação
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setCompaniesModalOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-[var(--primary)]/30 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  <Icon name="settings" className="w-5 h-5" />
-                  Gerenciar empresas
-                </button>
               </div>
             </div>
 

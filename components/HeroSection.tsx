@@ -17,6 +17,7 @@ export default function HeroSection() {
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
+  const [showEmConstrucao, setShowEmConstrucao] = useState(false)
   const [code, setCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
   const [emailEnviado, setEmailEnviado] = useState('')
@@ -72,17 +73,17 @@ export default function HeroSection() {
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
-      if (!showLogin && !showSignup && !showGallery) {
+      if (!showLogin && !showSignup && !showGallery && !showEmConstrucao) {
         document.body.style.overflow = ''
       }
     }
-  }, [showLogin, showSignup, showGallery])
+  }, [showLogin, showSignup, showGallery, showEmConstrucao])
 
   useEffect(() => {
-    if (!showGallery) {
+    if (!showGallery && !showEmConstrucao) {
       document.body.style.overflow = ''
     }
-  }, [showGallery])
+  }, [showGallery, showEmConstrucao])
 
   // Resetar estados de login quando não estiver autenticado (após logout)
   useEffect(() => {
@@ -381,10 +382,10 @@ export default function HeroSection() {
 
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              {!showLogin && !showSignup && !showGallery && (
+              {!showLogin && !showSignup && !showGallery && !showEmConstrucao && (
                 <button
                   onClick={() => {
-                    setShowGallery(true)
+                    setShowEmConstrucao(true)
                     document.body.style.overflow = 'hidden'
                   }}
                   className="inline-flex items-center gap-3 px-8 py-4 bg-white text-[var(--primary)] text-lg font-semibold rounded-xl border-2 border-[var(--primary)] shadow-lg hover:bg-[var(--primary)]/5 transition-all duration-200 transform hover:scale-105 active:scale-95"
@@ -762,6 +763,54 @@ export default function HeroSection() {
                   </form>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Em Construção */}
+      {showEmConstrucao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-200">
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-200 scale-100">
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowEmConstrucao(false)
+                document.body.style.overflow = ''
+              }}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors z-10"
+              aria-label="Fechar"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            {/* Modal Content */}
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[var(--primary)]/10 to-[var(--accent)]/10 flex items-center justify-center">
+                <svg className="w-10 h-10 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                Em Construção
+              </h2>
+              
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Estamos trabalhando para trazer uma experiência completa de demonstração da plataforma. Em breve você poderá conhecer todas as funcionalidades do FinanceHub!
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowEmConstrucao(false)
+                  document.body.style.overflow = ''
+                }}
+                className="w-full py-3 px-4 bg-[var(--primary)] text-white font-semibold rounded-xl shadow-lg hover:bg-[var(--accent)] transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Entendi
+              </button>
             </div>
           </div>
         </div>
