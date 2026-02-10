@@ -5,9 +5,7 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import SolicitacaoModal from '@/components/SolicitacaoModal'
-import CompanyManagementModal from '@/components/CompanyManagementModal'
 import ConfiguracoesModal from '@/components/ConfiguracoesModal'
-import HistoricoModal from '@/components/HistoricoModal'
 import SuporteModal from '@/components/SuporteModal'
 import NotificacoesDropdown from '@/components/NotificacoesDropdown'
 import UserAvatarDropdown from '@/components/UserAvatarDropdown'
@@ -393,23 +391,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         }}
       />
 
-      <CompanyManagementModal
-        isOpen={companiesModalOpen}
-        companies={companies}
-        onClose={() => setCompaniesModalOpen(false)}
-        onCreate={(data: CompanyFormData) => {
-          setCompanies((prev) => [...prev, { ...data, id: crypto.randomUUID() }])
-        }}
-        onUpdate={(id, data) => {
-          setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)))
-        }}
-        onDelete={(id) => {
-          setCompanies((prev) => prev.filter((c) => c.id !== id))
-        }}
-      />
 
       <ConfiguracoesModal />
-      <HistoricoModal />
       <SuporteModal />
       <PerfilModal isOpen={isPerfilModalOpen} onClose={() => setIsPerfilModalOpen(false)} />
     </div>

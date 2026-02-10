@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import HeroSection from '@/components/HeroSection'
 import LoginPage from '@/components/LoginPage'
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams()
   const [showLogin, setShowLogin] = useState(false)
 
@@ -21,4 +21,12 @@ export default function Home() {
   }
 
   return <HeroSection />
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<HeroSection />}>
+      <HomeContent />
+    </Suspense>
+  )
 }

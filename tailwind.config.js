@@ -7,6 +7,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        'custom': '991px',
+      },
       colors: {
         gold: {
           DEFAULT: '#D4AF37',

@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import LoginForm from './LoginForm'
 import BrandingPanel from './BrandingPanel'
 import Footer from './Footer'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const searchParams = useSearchParams()
   const cadastroSucesso = searchParams?.get('cadastro')
 
@@ -42,5 +42,25 @@ export default function LoginPage() {
       </div>
       <Footer />
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col">
+        <div className="flex flex-col lg:flex-row flex-1">
+          <BrandingPanel />
+          <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-[var(--background)]">
+            <div className="w-full max-w-md">
+              <div className="text-center text-gray-500">Carregando...</div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }

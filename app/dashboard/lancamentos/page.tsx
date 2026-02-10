@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import ResponsiveTable from '@/components/ResponsiveTable'
 import LancamentoModal from '@/components/LancamentoModal'
 import DeleteLancamentoModal from '@/components/DeleteLancamentoModal'
-import { SkeletonCard } from '@/components/Skeleton'
+import { SkeletonCard, Skeleton } from '@/components/Skeleton'
 import type { Lancamento, LancamentoFormData, LancamentoStatus } from '@/types/lancamento'
 
 const STORAGE_KEY = 'financehub_lancamentos'

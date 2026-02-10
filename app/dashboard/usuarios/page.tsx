@@ -131,7 +131,7 @@ export default function UsuariosPage() {
 
       {/* Loading State */}
       {loading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 custom:grid-cols-2 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
@@ -165,7 +165,7 @@ export default function UsuariosPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 custom:grid-cols-2 gap-6">
           {filteredUsers.map((user) => (
             <div
               key={user.id}

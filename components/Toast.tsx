@@ -64,25 +64,29 @@ export default function ToastComponent({ toast, onClose }: ToastProps) {
 
   const styles = {
     success: {
-      bg: 'bg-emerald-50 border-emerald-200',
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-200',
       icon: 'text-emerald-600',
       text: 'text-emerald-900',
       close: 'text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100',
     },
     error: {
-      bg: 'bg-red-50 border-red-200',
+      bg: 'bg-red-50',
+      border: 'border-red-200',
       icon: 'text-red-600',
       text: 'text-red-900',
       close: 'text-red-600 hover:text-red-800 hover:bg-red-100',
     },
     warning: {
-      bg: 'bg-amber-50 border-amber-200',
+      bg: 'bg-amber-50',
+      border: 'border-amber-200',
       icon: 'text-amber-600',
       text: 'text-amber-900',
       close: 'text-amber-600 hover:text-amber-800 hover:bg-amber-100',
     },
     info: {
-      bg: 'bg-blue-50 border-blue-200',
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
       icon: 'text-blue-600',
       text: 'text-blue-900',
       close: 'text-blue-600 hover:text-blue-800 hover:bg-blue-100',
