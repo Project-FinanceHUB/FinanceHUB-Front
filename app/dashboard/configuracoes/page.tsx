@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 
 function Icon({ name, className }: { name: string; className?: string }) {
-  const cls = `w-8 h-8 ${className ?? ''}`
+  const cls = `w-5 h-5 ${className ?? ''}`
   switch (name) {
     case 'users':
       return (
@@ -57,24 +57,29 @@ export default function ConfiguracoesPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Configurações</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Gerenciamento de usuários da plataforma.
-        </p>
+    <div className="px-4 sm:px-6 py-6 md:py-8 w-full max-w-full">
+      <div className="mb-6 md:mb-8 flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white shadow-lg shadow-[var(--primary)]/25">
+          <Icon name="settings" className="w-5 h-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Configurações</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Gerenciamento de usuários e preferências da plataforma.
+          </p>
+        </div>
       </div>
 
-      <div className="mt-8">
+      <div className="max-w-md">
         <button
           type="button"
           onClick={handleUsuariosClick}
-          className="text-left rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:border-[var(--primary)] hover:shadow-md transition-all group w-full max-w-md"
+          className="text-left rounded-2xl bg-white border border-gray-200/80 p-5 md:p-6 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:border-[var(--primary)]/20 transition-all duration-200 group w-full"
         >
-          <div className="w-12 h-12 rounded-xl bg-[var(--secondary)] text-[var(--primary)] flex items-center justify-center mb-4 group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
-            <Icon name="users" />
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--primary)]/10 to-[var(--accent)]/10 text-[var(--primary)] flex items-center justify-center mb-4 group-hover:from-[var(--primary)] group-hover:to-[var(--accent)] group-hover:text-white transition-all duration-200">
+            <Icon name="users" className="w-6 h-6" />
           </div>
-          <h3 className="font-semibold text-gray-900">Gerenciamento de usuários</h3>
+          <h3 className="font-bold text-gray-900">Gerenciamento de usuários</h3>
           <p className="text-sm text-gray-500 mt-1">Adicione, edite e remova usuários da plataforma.</p>
         </button>
       </div>

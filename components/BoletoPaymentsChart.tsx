@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   BarChart,
   Bar,
@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Skeleton } from './Skeleton'
+import type { Solicitacao } from '@/types/solicitacao'
 
 export type BoletoStatus = 'pago' | 'pendente' | 'vencido'
 
@@ -49,6 +50,80 @@ const MOCK_DATA: MonthBoletoData[] = [
   { mes: 'Mês 12', pago: 12500, pendente: 0,     vencido: 0,    qtdPago: 10, qtdPendente: 0, qtdVencido: 0 },
 ]
 
+/** Valor exibido por boleto quando os dados vêm das solicitações (sem valor real) */
+const VALOR_POR_BOLETO = 1000
+
+/** Mapeia status da solicitação para status do boleto no gráfico */
+function statusToBoletoStatus(status: Solicitacao['status']): BoletoStatus {
+  if (status === 'concluido' || status === 'fechado' || status === 'aprovado') return 'pago'
+  if (status === 'rejeitado' || status === 'cancelado') return 'vencido'
+  return 'pendente'
+}
+
+/** Gera rótulos dos últimos 12 meses (Mês 1 = mais antigo, Mês 12 = mais recente) */
+function getLast12MonthsLabels(): string[] {
+  const labels: string[] = []
+  const now = new Date()
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    labels.push(`Mês ${12 - i}`)
+  }
+  return labels
+}
+
+/** Constrói dados do gráfico a partir das solicitações que possuem boleto */
+function buildChartDataFromSolicitacoes(solicitacoes: Solicitacao[]): MonthBoletoData[] {
+  const labels = getLast12MonthsLabels()
+  const now = new Date()
+  const months: MonthBoletoData[] = labels.map((mes, idx) => ({
+    mes,
+    pago: 0,
+    pendente: 0,
+    vencido: 0,
+    qtdPago: 0,
+    qtdPendente: 0,
+    qtdVencido: 0,
+  }))
+
+  const comBoleto = solicitacoes.filter((s) => s.boletoPath || (s.boleto && typeof s.boleto === 'string'))
+  if (comBoleto.length === 0) return months
+
+  // Mês 12 = atual, Mês 11 = um mês atrás, ...
+  const getMonthIndex = (dateStr: string | undefined): number => {
+    if (!dateStr) return 11
+    const d = new Date(dateStr)
+    if (Number.isNaN(d.getTime())) return 11
+    const diffMonths = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
+    if (diffMonths < 0) return 11
+    if (diffMonths > 11) return 0
+    return 11 - diffMonths
+  }
+
+  for (const s of comBoleto) {
+    // Usar o mês selecionado na solicitação (1-12) ou derivar da data de criação
+    const mesNum = s.mes != null ? Number(s.mes) : NaN
+    const idx =
+      !Number.isNaN(mesNum) && mesNum >= 1 && mesNum <= 12
+        ? mesNum - 1
+        : getMonthIndex(s.dataCriacao)
+    const row = months[idx]
+    if (!row) continue
+    const status = statusToBoletoStatus(s.status)
+    if (status === 'pago') {
+      row.qtdPago += 1
+      row.pago += VALOR_POR_BOLETO
+    } else if (status === 'pendente') {
+      row.qtdPendente += 1
+      row.pendente += VALOR_POR_BOLETO
+    } else {
+      row.qtdVencido += 1
+      row.vencido += VALOR_POR_BOLETO
+    }
+  }
+
+  return months
+}
+
 function formatBRL(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -62,12 +137,14 @@ interface CustomTooltipProps {
   active?: boolean
   payload?: Array<{ name: string; value: number; dataKey: string }>
   label?: string
+  chartData?: MonthBoletoData[]
 }
 
-function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+function CustomTooltip({ active, payload, label, chartData }: CustomTooltipProps) {
   if (!active || !payload?.length || !label) return null
 
-  const data = MOCK_DATA.find((d) => d.mes === label)
+  const dataSource = chartData ?? MOCK_DATA
+  const data = dataSource.find((d) => d.mes === label)
   if (!data) return null
 
   return (
@@ -117,13 +194,24 @@ const FILTER_OPTIONS: { key: BoletoStatus; label: string; color: string }[] = [
   { key: 'vencido', label: 'Vencidos', color: COLORS.vencido },
 ]
 
-export default function BoletoPaymentsChart() {
+type BoletoPaymentsChartProps = {
+  /** Solicitações com boleto enviado; quando informado, o gráfico é atualizado com base nelas */
+  solicitacoes?: Solicitacao[]
+}
+
+export default function BoletoPaymentsChart({ solicitacoes = [] }: BoletoPaymentsChartProps) {
   const [mounted, setMounted] = useState(false)
   const [filter, setFilter] = useState<StatusFilter>({
     pago: true,
     pendente: true,
     vencido: true,
   })
+
+  const chartData = useMemo(() => {
+    const fromSolicitacoes = buildChartDataFromSolicitacoes(solicitacoes)
+    const hasRealData = solicitacoes.some((s) => s.boletoPath || (s.boleto && typeof s.boleto === 'string'))
+    return hasRealData ? fromSolicitacoes : MOCK_DATA
+  }, [solicitacoes])
 
   useEffect(() => {
     setMounted(true)
@@ -180,7 +268,7 @@ export default function BoletoPaymentsChart() {
           {mounted ? (
           <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={300}>
             <BarChart
-              data={MOCK_DATA}
+              data={chartData}
               margin={{ top: 12, right: 12, left: 0, bottom: 0 }}
             >
               <CartesianGrid
@@ -200,7 +288,7 @@ export default function BoletoPaymentsChart() {
                 tickLine={false}
                 tickFormatter={(v) => `R$ ${(v / 1000).toFixed(0)}k`}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(16, 185, 129, 0.08)' }} />
+              <Tooltip content={<CustomTooltip chartData={chartData} />} cursor={{ fill: 'rgba(16, 185, 129, 0.08)' }} />
               <Legend
                 wrapperStyle={{ paddingTop: 16 }}
                 formatter={(value) => (

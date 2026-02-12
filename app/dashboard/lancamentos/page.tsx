@@ -148,18 +148,26 @@ export default function LancamentosPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Lançamentos Financeiros</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Envios de boletos e notas fiscais: data, horário, status, protocolo e tipo (Boleto ou NF).
-          </p>
+    <div className="px-4 sm:px-6 py-6 md:py-8 w-full max-w-full">
+      <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white shadow-lg shadow-[var(--primary)]/25">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2V5a2 2 0 00-2-2H9a2 2 0 00-2 2v2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6M9 16h4" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Lançamentos Financeiros</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Envios de boletos e notas fiscais: data, horário, status, protocolo e tipo (Boleto ou NF).
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={handleCreate}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:opacity-90 transition"
+          className="inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-5 py-3 text-sm font-semibold shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl hover:shadow-[var(--primary)]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -168,7 +176,7 @@ export default function LancamentosPage() {
         </button>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+      <div className="rounded-2xl bg-white border border-gray-200/80 shadow-xl shadow-gray-200/50 overflow-hidden">
         <ResponsiveTable<LancamentoRow>
           aria-label="Tabela de lançamentos financeiros"
           columns={columns}
@@ -187,7 +195,7 @@ export default function LancamentosPage() {
                   <button
                     type="button"
                     onClick={() => handleEdit(l)}
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:text-[var(--primary)] hover:bg-[rgba(3,154,66,0.08)] transition"
+                                    className="inline-flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 rounded-xl text-gray-500 hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-all duration-200"
                     aria-label="Editar"
                     title="Editar"
                   >
@@ -199,7 +207,7 @@ export default function LancamentosPage() {
                   <button
                     type="button"
                     onClick={() => handleDeleteClick(l)}
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition"
+                                    className="inline-flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
                     aria-label="Excluir"
                     title="Excluir"
                   >
@@ -214,8 +222,14 @@ export default function LancamentosPage() {
           }}
         />
         {lancamentos.length === 0 && (
-          <div className="px-5 py-10 text-center text-gray-500 text-sm">
-            Nenhum lançamento cadastrado. Clique em &quot;Novo lançamento&quot; para adicionar.
+          <div className="px-5 py-12 md:py-16 text-center">
+            <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center shadow-inner border border-gray-100">
+              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2V5a2 2 0 00-2-2H9a2 2 0 00-2 2v2z" />
+              </svg>
+            </div>
+            <p className="text-base font-semibold text-gray-700">Nenhum lançamento cadastrado</p>
+            <p className="text-sm text-gray-500 mt-1">Clique em &quot;Novo lançamento&quot; para adicionar.</p>
           </div>
         )}
       </div>

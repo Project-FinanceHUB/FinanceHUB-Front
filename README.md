@@ -1,74 +1,32 @@
-# **FinanceHub — Visão Geral**
+# FinanceHUB Frontend
 
-**FinanceHub** é uma plataforma **SaaS** para **gestão financeira de clientes dentro de contratos empresariais**, centralizando **boletos, notas fiscais, pagamentos, histórico de envios e suporte** em um único painel moderno e seguro.
+Frontend do FinanceHUB — sistema de gestão financeira.
 
-A solução foi projetada para oferecer **transparência financeira, organização e rastreabilidade**, permitindo que clientes acompanhem toda a sua vida financeira durante o período contratual (ex: **12 meses**).
+## Stack
 
----
+- Next.js 16
+- React 18
+- TypeScript
+- Tailwind CSS
+- Supabase (auth e dados)
+- Recharts (gráficos)
 
-## 🎯 **Objetivo do Projeto**
+## Desenvolvimento
 
-Fornecer um **Painel do Cliente** onde seja possível:
+```bash
+npm install
+npm run dev
+```
 
-- Acompanhar **boletos pagos, pendentes e vencidos**
-- Visualizar **notas fiscais emitidas e enviadas**
-- Monitorar **envios com data, horário e protocolo**
-- Consultar **histórico financeiro completo**
-- Acompanhar o **progresso financeiro do contrato**
-- Abrir e gerenciar **tickets de suporte**
-- Controlar **usuários e configurações da conta**
+Acesse [http://localhost:3000](http://localhost:3000).
 
----
+## Scripts
 
-## 🚀 **Funcionalidades Principais**
+- `npm run dev` — servidor de desenvolvimento
+- `npm run build` — build de produção
+- `npm run start` — inicia o app em produção
+- `npm run lint` — executa o linter
 
-### 📊 **Dashboard Financeiro**
-- Gráficos mensais (**12 meses de contrato**)
-- Visualização de **valores pagos, pendentes e vencidos**
-- Indicadores rápidos (**KPIs**) com totais e progresso do contrato
+## Variáveis de ambiente
 
----
-
-### 💰 **Lançamentos Financeiros**
-- Registro de envios de **boletos e notas fiscais**
-- Data, horário, status e **protocolo de envio**
-- **Rastreabilidade completa** das operações
-
----
-
-### 🗂️ **Histórico**
-- Lista completa de **boletos e NF enviadas**
-- **Protocolos, status e datas**
-- Auditoria **financeira e documental**
-
----
-
-### 🎫 **Suporte**
-- Sistema de **tickets**
-- Envio e recebimento de **mensagens**
-- Histórico de **atendimentos**
-
----
-
-### ⚙️ **Configurações**
-- Gestão de **usuários**
-- Configuração de **perfil**
-- Preferências e **segurança da conta**
-
----
-
-## 🧩 **Estrutura de Navegação**
-
-**Sidebar:**
-- **Lançamentos Financeiros**
-- **Histórico**
-- **Suporte**
-- **Configurações**
-
----
-
-## 💡 **Visão do Produto**
-
-A **FinanceHub** busca se tornar um **hub financeiro inteligente para empresas e seus clientes**, unificando **pagamentos, documentos fiscais e comunicação** em um único ambiente confiável.
-
-> **Controle financeiro claro, rastreável e centralizado dentro do contrato.**
+Copie `.env.local.example` para `.env.local` e preencha com a URL e a chave anon do seu projeto Supabase.

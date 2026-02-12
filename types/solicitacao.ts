@@ -21,8 +21,13 @@ export type Solicitacao = {
   estagio: SolicitacaoStage
   descricao?: string
   mensagem?: string
+  /** Mês do contrato (1-12) para refletir no gráfico de boletos */
+  mes?: number
   boleto?: File | string
   notaFiscal?: File | string
+  /** Caminho do boleto no servidor (retornado pela API) */
+  boletoPath?: string
+  notaFiscalPath?: string
   visualizado?: boolean
   visualizadoEm?: string
   respondido?: boolean

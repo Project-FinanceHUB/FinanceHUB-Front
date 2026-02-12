@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import LoadingButton from './LoadingButton'
 
 type DeleteConfirmModalProps = {
   isOpen: boolean
   solicitacaoNumero: string
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
 }
 
 function cn(...parts: Array<string | false | null | undefined>) {
@@ -19,9 +20,12 @@ export default function DeleteConfirmModal({
   onClose,
   onConfirm,
 }: DeleteConfirmModalProps) {
+  const [isDeleting, setIsDeleting] = useState(false)
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
+      setIsDeleting(false)
     } else {
       document.body.style.overflow = ''
     }
@@ -32,9 +36,14 @@ export default function DeleteConfirmModal({
 
   if (!isOpen) return null
 
-  const handleConfirm = () => {
-    onConfirm()
-    onClose()
+  const handleConfirm = async () => {
+    setIsDeleting(true)
+    try {
+      await onConfirm()
+      onClose()
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -70,17 +79,20 @@ export default function DeleteConfirmModal({
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <button
+            <LoadingButton
               type="button"
               onClick={handleConfirm}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-red-700 transition"
+              isLoading={isDeleting}
+              variant="danger"
+              className="flex-1 py-2.5 min-h-[44px]"
             >
               Excluir
-            </button>
+            </LoadingButton>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition"
+              disabled={isDeleting}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition disabled:opacity-50 min-h-[44px]"
             >
               Cancelar
             </button>

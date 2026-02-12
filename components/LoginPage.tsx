@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import LoginForm from './LoginForm'
 import BrandingPanel from './BrandingPanel'
 import Footer from './Footer'
+import Spinner from './Spinner'
 
 function LoginPageContent() {
   const searchParams = useSearchParams()
@@ -52,8 +53,11 @@ export default function LoginPage() {
         <div className="flex flex-col lg:flex-row flex-1">
           <BrandingPanel />
           <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-[var(--background)]">
-            <div className="w-full max-w-md">
-              <div className="text-center text-gray-500">Carregando...</div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg shadow-[var(--primary)]/20">
+                <Spinner size="md" className="border-white border-t-transparent" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">Carregando...</p>
             </div>
           </div>
         </div>

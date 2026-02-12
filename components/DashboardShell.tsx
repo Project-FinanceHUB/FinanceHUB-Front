@@ -6,7 +6,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import SolicitacaoModal from '@/components/SolicitacaoModal'
 import ConfiguracoesModal from '@/components/ConfiguracoesModal'
-import SuporteModal from '@/components/SuporteModal'
 import NotificacoesDropdown from '@/components/NotificacoesDropdown'
 import UserAvatarDropdown from '@/components/UserAvatarDropdown'
 import PerfilModal from '@/components/PerfilModal'
@@ -14,6 +13,8 @@ import Footer from '@/components/Footer'
 import { useDashboard } from '@/context/DashboardContext'
 import { useSuporte } from '@/context/SuporteContext'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
+import Spinner from '@/components/Spinner'
 import type { CompanyFormData } from '@/types/company'
 
 function cn(...parts: Array<string | false | null | undefined>) {
@@ -152,9 +153,10 @@ function SidebarItem({
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { companies, setCompanies, addSolicitacao, companiesModalOpen, setCompaniesModalOpen } = useDashboard()
+  const { companies, setCompanies, addSolicitacao, companiesModalOpen, setCompaniesModalOpen, loading: contextLoading } = useDashboard()
   const { mensagens } = useSuporte()
   const { user } = useAuth()
+  const toast = useToast()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSolicitacaoModalOpen, setIsSolicitacaoModalOpen] = useState(false)
@@ -374,7 +376,16 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </header>
 
           <div className="flex-1 bg-gradient-to-br from-gray-50 via-white to-gray-50">
-            {children}
+            {contextLoading ? (
+              <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 px-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg shadow-[var(--primary)]/20">
+                  <Spinner size="md" className="border-white border-t-transparent" />
+                </div>
+                <p className="text-sm font-medium text-slate-600">Carregando...</p>
+              </div>
+            ) : (
+              children
+            )}
           </div>
 
           <Footer />
@@ -385,15 +396,20 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         isOpen={isSolicitacaoModalOpen}
         companies={companies}
         onClose={() => setIsSolicitacaoModalOpen(false)}
-        onSubmit={(formData) => {
-          addSolicitacao(formData)
-          setIsSolicitacaoModalOpen(false)
+        onSubmit={async (formData) => {
+          try {
+            await addSolicitacao(formData)
+            setIsSolicitacaoModalOpen(false)
+            toast.success('Solicitação criada com sucesso!')
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Erro ao criar solicitação')
+            throw e
+          }
         }}
       />
 
 
       <ConfiguracoesModal />
-      <SuporteModal />
       <PerfilModal isOpen={isPerfilModalOpen} onClose={() => setIsPerfilModalOpen(false)} />
     </div>
   )

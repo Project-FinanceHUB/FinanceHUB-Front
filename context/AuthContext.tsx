@@ -109,7 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!accessToken) throw new Error('Erro ao obter sessão.')
 
     const validation = await authAPI.validateSession(accessToken)
-    if (!validation.valid || !validation.session) throw new Error('Erro ao carregar perfil.')
+    if (!validation.valid || !validation.session) {
+      throw new Error(validation.error || 'Erro ao carregar perfil.')
+    }
 
     setToken(accessToken)
     setUser(validation.session.user)

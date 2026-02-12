@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Solicitacao, SolicitacaoFormData, SolicitacaoStatus } from '@/types/solicitacao'
 import type { Company } from '@/types/company'
 import FileUpload from './FileUpload'
+import LoadingButton from './LoadingButton'
 
 /**
  * Gera um número de solicitação no formato FIN + 6 números aleatórios
@@ -19,9 +20,10 @@ type SolicitacaoFormProps = {
   companies: Company[]
   onSubmit: (data: SolicitacaoFormData) => void
   onCancel: () => void
+  isSubmitting?: boolean
 }
 
-export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCancel }: SolicitacaoFormProps) {
+export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCancel, isSubmitting = false }: SolicitacaoFormProps) {
   const isEditing = !!solicitacao
 
   const firstCompany = companies[0]
@@ -35,6 +37,7 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
     estagio: solicitacao?.estagio || 'Pendente',
     descricao: solicitacao?.descricao || '',
     mensagem: solicitacao?.mensagem || '',
+    mes: solicitacao?.mes ?? 12,
     boleto: solicitacao?.boleto || undefined,
     notaFiscal: solicitacao?.notaFiscal || undefined,
   })
@@ -50,7 +53,13 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
 
   const [errors, setErrors] = useState<Partial<Record<keyof SolicitacaoFormData, string>>>({})
 
+  // Só preencher/resetar o formulário quando mudar a solicitação editada (por id), não a cada re-render
+  const solicitacaoIdRef = useRef<string | null>(null)
   useEffect(() => {
+    const currentId = solicitacao?.id ?? null
+    if (solicitacaoIdRef.current === currentId) return
+    solicitacaoIdRef.current = currentId
+
     if (solicitacao) {
       setFormData({
         numero: solicitacao.numero,
@@ -61,6 +70,7 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
         estagio: solicitacao.estagio,
         descricao: solicitacao.descricao || '',
         mensagem: solicitacao.mensagem || '',
+        mes: solicitacao.mes ?? 12,
       })
       setSelectedCompanyId(companies.find((c) => c.nome === solicitacao.titulo)?.id || firstCompany?.id || '')
     } else {
@@ -69,10 +79,11 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
         numero: generateSolicitacaoNumero(),
         titulo: firstCompany?.nome || '',
         origem: firstCompany?.cnpjs?.[0] || '',
+        mes: 12,
       }))
       setSelectedCompanyId(firstCompany?.id || '')
     }
-  }, [solicitacao, companies])
+  }, [solicitacao?.id, solicitacao, companies])
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof SolicitacaoFormData, string>> = {}
@@ -107,7 +118,7 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
     }
   }
 
-  const handleChange = (field: keyof SolicitacaoFormData, value: string) => {
+  const handleChange = (field: keyof SolicitacaoFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }))
@@ -215,6 +226,41 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
         />
       </div>
 
+      <div>
+        <label htmlFor="mes" className="block text-sm font-bold text-gray-900 mb-2">
+          Mês do contrato <span className="text-red-500">*</span>
+        </label>
+        <select
+          id="mes"
+          value={formData.mes ?? 12}
+          onChange={(e) => handleChange('mes', Number(e.target.value))}
+          className={`w-full rounded-xl border-2 px-4 py-3 text-sm outline-none transition-all duration-200 ${
+            errors.mes
+              ? 'border-red-300 bg-red-50/50 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+              : 'border-gray-200 bg-white hover:border-gray-300 focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]'
+          }`}
+        >
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+            <option key={n} value={n}>
+              Mês {n}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-500 mt-1">
+          {isEditing
+            ? 'Altere o mês para atualizar a posição desta solicitação no gráfico de progresso do contrato.'
+            : 'Refere-se ao mês exibido no gráfico de progresso do contrato (12 meses).'}
+        </p>
+        {errors.mes && (
+          <p className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            {errors.mes}
+          </p>
+        )}
+      </div>
+
       <input type="hidden" value={formData.titulo} readOnly />
       <input type="hidden" value={formData.origem} readOnly />
 
@@ -280,48 +326,25 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-bold text-gray-900 mb-3">
-          Status <span className="text-gray-500 font-normal text-xs">(Selecione o status da solicitação)</span>
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          {statusOptions.map((status) => {
-            const isSelected = formData.status === status.value
-            return (
-              <button
-                key={status.value}
-                type="button"
-                onClick={() => handleChange('status', status.value)}
-                className={`relative rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-all duration-200 text-left ${
-                  isSelected
-                    ? `${status.bgColor} ${status.color} border-current shadow-md scale-[1.02]`
-                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{status.label}</span>
-                  {isSelected && (
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-              </button>
-            )
-          })}
+      {/* Status é definido automaticamente pela fila do SaaS; cliente não pode alterar */}
+      {isEditing ? (
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-2">
+            Status atual
+          </label>
+          <div className="rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            {statusOptions.find((s) => s.value === formData.status)?.label ?? formData.status}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">O status é gerenciado pelo suporte e pela fila do sistema.</p>
         </div>
-        <input
-          type="hidden"
-          id="status"
-          value={formData.status}
-          readOnly
-        />
-      </div>
+      ) : null}
 
       <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
-        <button
+        <LoadingButton
           type="submit"
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-white px-5 py-3 text-sm font-bold shadow-lg hover:bg-[var(--accent)] hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+          isLoading={isSubmitting}
+          variant="primary"
+          className="flex-1 py-3 min-h-[44px]"
         >
           {solicitacao ? (
             <>
@@ -338,11 +361,12 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
               Criar solicitação
             </>
           )}
-        </button>
+        </LoadingButton>
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+          disabled={isSubmitting}
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 min-h-[44px]"
         >
           Cancelar
         </button>

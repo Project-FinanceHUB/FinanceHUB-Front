@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ResponsiveTable from '@/components/ResponsiveTable'
 import SolicitacaoModal from '@/components/SolicitacaoModal'
 import SolicitacaoDetalhesModal from '@/components/SolicitacaoDetalhesModal'
@@ -9,6 +10,7 @@ import BoletoPaymentsChart from '@/components/BoletoPaymentsChart'
 import { useDashboard } from '@/context/DashboardContext'
 import { useToast } from '@/context/ToastContext'
 import { Skeleton, SkeletonCard, SkeletonTable } from '@/components/Skeleton'
+import Spinner from '@/components/Spinner'
 import type { Solicitacao, SolicitacaoFormData, SolicitacaoStatus } from '@/types/solicitacao'
 import type { Company, CompanyFormData } from '@/types/company'
 
@@ -174,7 +176,8 @@ function Icon({ name, className }: { name: string; className?: string }) {
   }
 
 export default function DashboardPage() {
-  const { companies, setCompanies, solicitacoes, setSolicitacoes, addSolicitacao, setCompaniesModalOpen, loading } = useDashboard()
+  const searchParams = useSearchParams()
+  const { companies, setCompanies, solicitacoes, setSolicitacoes, addSolicitacao, refetchSolicitacoes, setCompaniesModalOpen, loading } = useDashboard()
   const toast = useToast()
   const [mounted, setMounted] = useState(false)
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'em_revisao' | 'fechado'>('todos')
@@ -193,47 +196,69 @@ export default function DashboardPage() {
     setMounted(true)
   }, [])
 
-  // Atualiza companies quando a página volta ao foco (após voltar da página de empresas)
+  // Abrir modal de nova solicitação ou edição via query params (ex.: /dashboard?nova=solicitacao ou ?editar=id)
+  const novaParam = searchParams.get('nova')
+  const editarParam = searchParams.get('editar')
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const handleFocus = () => {
-        const saved = localStorage.getItem('financehub_companies')
-        if (saved) {
-          try {
-            setCompanies(JSON.parse(saved))
-          } catch {
-            // Ignora erros de parsing
-          }
-        }
+    if (novaParam === 'solicitacao') {
+      setSelectedSolicitacao(undefined)
+      setIsSolicitacaoModalOpen(true)
+      window.history.replaceState({}, '', '/dashboard')
+    } else if (editarParam && solicitacoes.length > 0) {
+      const sol = solicitacoes.find((s) => s.id === editarParam)
+      if (sol) {
+        setSelectedSolicitacao(sol)
+        setIsSolicitacaoModalOpen(true)
+        window.history.replaceState({}, '', '/dashboard')
       }
-      window.addEventListener('focus', handleFocus)
-      return () => window.removeEventListener('focus', handleFocus)
     }
-  }, [setCompanies])
+  }, [novaParam, editarParam, solicitacoes])
 
-  const handleCreateSolicitacao = (formData: SolicitacaoFormData) => {
-    addSolicitacao(formData)
-    toast.success('Solicitação criada com sucesso!')
+  const handleCreateSolicitacao = async (formData: SolicitacaoFormData) => {
+    try {
+      await addSolicitacao(formData)
+      toast.success('Solicitação criada com sucesso!')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao criar solicitação')
+      throw e
+    }
   }
 
-  const handleUpdateSolicitacao = (formData: SolicitacaoFormData) => {
+  const handleUpdateSolicitacao = async (formData: SolicitacaoFormData) => {
     if (!selectedSolicitacao) return
-    setSolicitacoes((prev) =>
-      prev.map((sol) =>
-        sol.id === selectedSolicitacao.id
-          ? { ...sol, ...formData, dataAtualizacao: new Date().toISOString() }
-          : sol
+    try {
+      const { updateSolicitacao } = await import('@/lib/api/solicitacoes')
+      const updated = await updateSolicitacao(selectedSolicitacao.id, formData)
+      // Garantir que o mês editado reflita no gráfico (mesmo se a API não retornar mes)
+      const comMes = {
+        ...updated,
+        mes:
+          updated.mes != null && updated.mes >= 1 && updated.mes <= 12
+            ? updated.mes
+            : (formData.mes ?? selectedSolicitacao.mes ?? 12),
+      }
+      setSolicitacoes((prev) =>
+        prev.map((sol) => (sol.id === selectedSolicitacao.id ? comMes : sol))
       )
-    )
-    setSelectedSolicitacao(undefined)
-    toast.success('Solicitação atualizada com sucesso!')
+      setSelectedSolicitacao(undefined)
+      toast.success('Solicitação atualizada com sucesso!')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao atualizar solicitação')
+      throw e
+    }
   }
 
-  const handleDeleteSolicitacao = () => {
+  const handleDeleteSolicitacao = async () => {
     if (!solicitacaoToDelete) return
-    setSolicitacoes((prev) => prev.filter((sol) => sol.id !== solicitacaoToDelete.id))
-    setSolicitacaoToDelete(undefined)
-    toast.success('Solicitação excluída com sucesso!')
+    try {
+      const { deleteSolicitacao } = await import('@/lib/api/solicitacoes')
+      await deleteSolicitacao(solicitacaoToDelete.id)
+      setSolicitacoes((prev) => prev.filter((sol) => sol.id !== solicitacaoToDelete.id))
+      setSolicitacaoToDelete(undefined)
+      toast.success('Solicitação excluída com sucesso!')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao excluir solicitação')
+    }
   }
 
   const openCreateModal = () => {
@@ -257,11 +282,8 @@ export default function DashboardPage() {
   }
 
   const handleSolicitacaoSubmit = (formData: SolicitacaoFormData) => {
-    if (selectedSolicitacao) {
-      handleUpdateSolicitacao(formData)
-    } else {
-      handleCreateSolicitacao(formData)
-    }
+    if (selectedSolicitacao) return handleUpdateSolicitacao(formData)
+    return handleCreateSolicitacao(formData)
   }
 
 
@@ -344,6 +366,12 @@ export default function DashboardPage() {
   if (!mounted || loading) {
     return (
       <div className="px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col items-center gap-5 mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg shadow-[var(--primary)]/20">
+            <Spinner size="md" className="border-white border-t-transparent" />
+          </div>
+          <p className="text-sm font-medium text-slate-600">Carregando...</p>
+        </div>
         {/* Headline Skeleton */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
           <div className="flex-1">
@@ -370,17 +398,22 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 md:py-8">
             {/* Headline + Quick actions */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Solicitações</h1>
-                <p className="text-base text-gray-600">Visão centralizada de suporte, comunicação e pendências financeiras.</p>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 md:gap-6 mb-6 md:mb-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white shadow-lg shadow-[var(--primary)]/25">
+                  <Icon name="solicitacao" className="w-5 h-5" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Solicitações</h1>
+                  <p className="text-sm text-gray-500 mt-0.5">Visão centralizada de suporte, comunicação e pendências financeiras.</p>
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={openCreateModal}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] text-white px-6 py-3 text-sm font-semibold shadow-lg hover:bg-[var(--accent)] hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-5 py-3 text-sm font-semibold shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl hover:shadow-[var(--primary)]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                 >
                   <Icon name="plus" className="w-5 h-5" />
                   Abrir solicitação
@@ -389,8 +422,8 @@ export default function DashboardPage() {
             </div>
 
             {/* Summary cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              <div className="group relative rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:shadow-xl hover:border-[var(--primary)]/30 transition-all duration-300 overflow-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+              <div className="group relative rounded-2xl bg-white border border-gray-200/80 p-5 md:p-6 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:border-[var(--primary)]/20 transition-all duration-300 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative flex items-center justify-between">
                   <div>
@@ -403,7 +436,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mt-4 text-sm text-gray-600">Acompanhe status e baixe PDFs rapidamente.</div>
               </div>
-              <div className="group relative rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:shadow-xl hover:border-[var(--primary)]/30 transition-all duration-300 overflow-hidden">
+              <div className="group relative rounded-2xl bg-white border border-gray-200/80 p-5 md:p-6 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:border-[var(--primary)]/20 transition-all duration-300 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative flex items-center justify-between">
                   <div>
@@ -416,7 +449,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mt-4 text-sm text-gray-600">Priorize o que precisa de validação.</div>
               </div>
-              <div className="group relative rounded-2xl bg-white border border-gray-200 p-6 shadow-sm hover:shadow-xl hover:border-[var(--primary)]/30 transition-all duration-300 overflow-hidden">
+              <div className="group relative rounded-2xl bg-white border border-gray-200/80 p-5 md:p-6 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:border-[var(--primary)]/20 transition-all duration-300 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-sky-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative flex items-center justify-between">
                   <div>
@@ -431,14 +464,14 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Gráfico de pagamentos de boletos */}
+            {/* Gráfico de pagamentos de boletos — atualiza ao enviar nova solicitação com boleto */}
             <div className="mt-6">
-              <BoletoPaymentsChart />
+              <BoletoPaymentsChart solicitacoes={solicitacoes} />
             </div>
 
             {/* Tabela de solicitações */}
-            <div className="rounded-2xl bg-white border border-gray-200 shadow-lg overflow-hidden">
-              <div className="p-6 space-y-4">
+            <div className="rounded-2xl bg-white border border-gray-200/80 shadow-xl shadow-gray-200/50 overflow-hidden">
+              <div className="p-4 md:p-6 space-y-4 border-b border-gray-100 bg-gradient-to-r from-gray-50/80 to-white">
                 {/* Busca + tamanho da página */}
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <div className="relative flex-1 w-full">
@@ -588,7 +621,7 @@ export default function DashboardPage() {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => openDetalhesModal(t)}
-                          className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                           aria-label="Ver detalhes"
                           title="Ver detalhes"
                         >
@@ -599,19 +632,19 @@ export default function DashboardPage() {
                         </button>
                         <button
                           onClick={() => openEditModal(t)}
-                          className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 rounded-xl text-gray-500 hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-all duration-200"
                           aria-label="Editar registro"
                           title="Editar registro"
                         >
-                          <Icon name="edit" className="w-4 h-4" />
+                          <Icon name="edit" className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => openDeleteModal(t)}
-                          className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
                           aria-label="Excluir registro"
                           title="Excluir registro"
                         >
-                          <Icon name="trash" className="w-4 h-4" />
+                          <Icon name="trash" className="w-5 h-5" />
                         </button>
                       </div>
                     )
@@ -622,11 +655,11 @@ export default function DashboardPage() {
               />
 
               {solicitacoesVisiveis.length === 0 && (
-                <div className="px-6 py-16 text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Icon name="solicitacao" className="w-8 h-8 text-gray-400" />
+                <div className="px-6 py-12 md:py-16 text-center">
+                  <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center shadow-inner border border-gray-100">
+                    <Icon name="solicitacao" className="w-10 h-10 text-gray-400" />
                   </div>
-                  <p className="text-gray-600 font-medium">Nenhuma solicitação encontrada</p>
+                  <p className="text-base font-semibold text-gray-700">Nenhuma solicitação encontrada</p>
                   <p className="text-sm text-gray-500 mt-1">Tente ajustar os filtros ou a pesquisa.</p>
                 </div>
               )}

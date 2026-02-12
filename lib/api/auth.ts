@@ -135,22 +135,43 @@ export async function verifyCode(email: string, code: string): Promise<VerifyCod
  * Valida token de sessão
  */
 export async function validateSession(token: string): Promise<ValidateSessionResponse> {
-  const response = await fetch(`${API_URL}/api/auth/validate?token=${encodeURIComponent(token)}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  })
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Erro ao validar sessão' }))
-    return {
-      valid: false,
-      error: error.error || 'Erro ao validar sessão',
+  try {
+    const response = await fetch(
+      `${API_URL}/api/auth/validate?token=${encodeURIComponent(token)}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
+      }
+    )
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Erro ao validar sessão' }))
+      return {
+        valid: false,
+        error: error.error || 'Erro ao validar sessão',
+      }
     }
-  }
 
-  return response.json()
+    return response.json()
+  } catch (err: any) {
+    clearTimeout(timeoutId)
+    // Falha de rede (backend fora, CORS, etc.): não lançar, retornar sessão inválida
+    if (err?.name === 'AbortError' || err?.name === 'TypeError') {
+      return {
+        valid: false,
+        error: 'Backend indisponível. Verifique se o servidor está rodando em http://localhost:3001',
+      }
+    }
+    return { valid: false, error: err?.message || 'Erro ao validar sessão' }
+  }
 }
 
 /**

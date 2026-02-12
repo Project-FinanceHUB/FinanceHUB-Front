@@ -1,28 +1,66 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useHistorico } from '@/context/HistoricoContext'
-import type { HistoricoRegistro, HistoricoFormData, HistoricoTipo, HistoricoStatus } from '@/types/historico'
+import { useEffect, useState, useMemo } from 'react'
+import { useDashboard } from '@/context/DashboardContext'
+import SolicitacaoDetalhesModal from '@/components/SolicitacaoDetalhesModal'
+import Spinner from '@/components/Spinner'
+import type { Solicitacao } from '@/types/solicitacao'
+import type { HistoricoTipo } from '@/types/historico'
+import * as solicitacoesAPI from '@/lib/api/solicitacoes'
+
+/** Status de solicitação conforme definido no backend (FinanceHUB-Back) */
+type SolicitacaoStatusBackend = 'aberto' | 'pendente' | 'aguardando_validacao' | 'fechado'
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ')
 }
 
-const TIPOS: { value: HistoricoTipo; label: string }[] = [
+type HistoricoRow = {
+  id: string
+  tipo: HistoricoTipo | 'solicitacao'
+  protocolo: string
+  data: string
+  horario: string
+  /** Status da solicitação (valores do backend) */
+  status: string
+  titulo: string
+  descricao?: string
+  origem?: string
+  solicitacao?: Solicitacao
+}
+
+const TIPOS: { value: HistoricoTipo | 'solicitacao'; label: string }[] = [
+  { value: 'solicitacao', label: 'Solicitação' },
   { value: 'boleto', label: 'Boleto' },
   { value: 'nota_fiscal', label: 'Nota Fiscal' },
   { value: 'acao_sistema', label: 'Ação do Sistema' },
 ]
 
-const STATUS_OPTS: { value: HistoricoStatus; label: string }[] = [
-  { value: 'enviado', label: 'Enviado' },
+/** Opções de status conforme backend (src/types/solicitacao.ts) */
+const STATUS_OPTS: { value: SolicitacaoStatusBackend; label: string }[] = [
+  { value: 'aberto', label: 'Aberto' },
   { value: 'pendente', label: 'Pendente' },
-  { value: 'processado', label: 'Processado' },
-  { value: 'erro', label: 'Erro' },
-  { value: 'concluido', label: 'Concluído' },
-  { value: 'cancelado', label: 'Cancelado' },
+  { value: 'aguardando_validacao', label: 'Aguardando validação' },
+  { value: 'fechado', label: 'Fechado' },
 ]
+
+function solicitacaoToRow(s: Solicitacao): HistoricoRow {
+  const dataHora = s.dataCriacao ? new Date(s.dataCriacao) : new Date()
+  const data = dataHora.toISOString().slice(0, 10)
+  const horario = dataHora.toTimeString().slice(0, 5)
+  return {
+    id: s.id,
+    tipo: 'solicitacao',
+    protocolo: s.numero,
+    data,
+    horario,
+    status: s.status ?? 'aberto',
+    titulo: s.titulo || `Solicitação ${s.numero}`,
+    descricao: s.descricao || s.estagio || undefined,
+    origem: s.origem,
+    solicitacao: s,
+  }
+}
 
 function formatarData(d: string) {
   if (!d) return '—'
@@ -30,91 +68,56 @@ function formatarData(d: string) {
   return `${day}/${m}/${y}`
 }
 
-function BadgeStatus({ status }: { status: HistoricoStatus }) {
+function getStatusLabel(status: string): string {
+  return STATUS_OPTS.find((s) => s.value === status)?.label ?? status.replace(/_/g, ' ')
+}
+
+function BadgeStatus({ status }: { status: string }) {
   const tones: Record<string, string> = {
-    enviado: 'bg-sky-50 text-sky-700 ring-sky-200',
-    pendente: 'bg-amber-50 text-amber-800 ring-amber-200',
-    processado: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    erro: 'bg-rose-50 text-rose-700 ring-rose-200',
-    concluido: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    cancelado: 'bg-gray-100 text-gray-700 ring-gray-200',
+    aberto: 'bg-sky-50/90 text-sky-700 border border-sky-200/60',
+    pendente: 'bg-amber-50/90 text-amber-800 border border-amber-200/60',
+    aguardando_validacao: 'bg-purple-50/90 text-purple-700 border border-purple-200/60',
+    fechado: 'bg-emerald-50/90 text-emerald-700 border border-emerald-200/60',
   }
-  const opt = STATUS_OPTS.find((s) => s.value === status)
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset', tones[status] ?? 'bg-gray-100 text-gray-700')}>
-      {opt?.label ?? status}
+    <span className={cn('inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold tracking-tight', tones[status] ?? 'bg-gray-100 text-gray-600 border border-gray-200/60')}>
+      {getStatusLabel(status)}
     </span>
   )
 }
 
-function BadgeTipo({ tipo }: { tipo: HistoricoTipo }) {
+function BadgeTipo({ tipo }: { tipo: HistoricoRow['tipo'] }) {
   const tones: Record<string, string> = {
-    boleto: 'bg-amber-50 text-amber-800',
-    nota_fiscal: 'bg-blue-50 text-blue-700',
-    acao_sistema: 'bg-gray-100 text-gray-700',
+    solicitacao: 'bg-[var(--secondary)]/80 text-[var(--primary)] border border-[var(--primary)]/30',
+    boleto: 'bg-amber-50/90 text-amber-800 border border-amber-200/60',
+    nota_fiscal: 'bg-blue-50/90 text-blue-700 border border-blue-200/60',
+    acao_sistema: 'bg-slate-100/90 text-slate-600 border border-slate-200/60',
   }
   const opt = TIPOS.find((t) => t.value === tipo)
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', tones[tipo] ?? 'bg-gray-100')}>
+    <span className={cn('inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold tracking-tight', tones[tipo] ?? 'bg-slate-100 text-slate-600 border border-slate-200/60')}>
       {opt?.label ?? tipo}
     </span>
   )
 }
 
-const defaultForm: HistoricoFormData = {
-  tipo: 'boleto',
-  categoria: 'Boleto',
-  protocolo: '',
-  data: new Date().toISOString().slice(0, 10),
-  horario: new Date().toTimeString().slice(0, 5),
-  status: 'pendente',
-  titulo: '',
-  descricao: '',
-  origem: '',
-  cnpj: '',
-  valor: '',
-  observacoes: '',
-}
-
 export default function HistoricoPage() {
-  const router = useRouter()
-  const {
-    registros,
-    deleteRegistro,
-    syncFromLancamentos,
-  } = useHistorico()
+  const { solicitacoes, setSolicitacoes } = useDashboard()
 
   const [mounted, setMounted] = useState(false)
-  const [filtroTipo, setFiltroTipo] = useState<HistoricoTipo | 'todos'>('todos')
-  const [filtroStatus, setFiltroStatus] = useState<HistoricoStatus | 'todos'>('todos')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [filtroTipo, setFiltroTipo] = useState<HistoricoTipo | 'solicitacao' | 'todos'>('todos')
+  const [filtroStatus, setFiltroStatus] = useState<SolicitacaoStatusBackend | 'todos'>('todos')
   const [filtroBusca, setFiltroBusca] = useState('')
-  const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false)
-  const [registroParaDetalhes, setRegistroParaDetalhes] = useState<HistoricoRegistro | null>(null)
+  const [solicitacaoDetalhes, setSolicitacaoDetalhes] = useState<Solicitacao | null>(null)
+
+  const registros = useMemo(() => solicitacoes.map(solicitacaoToRow), [solicitacoes])
 
   useEffect(() => {
     setMounted(true)
-    syncFromLancamentos()
-  }, [syncFromLancamentos])
+  }, [])
 
-  useEffect(() => {
-    if (modalDetalhesOpen) {
-      document.body.style.overflow = 'hidden'
-      const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          handleCloseModal()
-        }
-      }
-      window.addEventListener('keydown', handleEscape)
-      return () => {
-        document.body.style.overflow = ''
-        window.removeEventListener('keydown', handleEscape)
-      }
-    } else {
-      document.body.style.overflow = ''
-    }
-  }, [modalDetalhesOpen])
-
-  const filtered = registros.filter((r) => {
+  const filtered = useMemo(() => registros.filter((r) => {
     if (filtroTipo !== 'todos' && r.tipo !== filtroTipo) return false
     if (filtroStatus !== 'todos' && r.status !== filtroStatus) return false
     if (filtroBusca.trim()) {
@@ -127,67 +130,54 @@ export default function HistoricoPage() {
       )
     }
     return true
-  })
+  }), [registros, filtroTipo, filtroStatus, filtroBusca])
 
-
-  const handleEdit = (r: HistoricoRegistro) => {
-    router.push(`/dashboard/historico/editar/${r.id}`)
-  }
-
-  const handleDelete = (id: string) => {
-    if (typeof window !== 'undefined' && !window.confirm('Excluir este registro do histórico?')) return
-    deleteRegistro(id)
-    if (registroParaDetalhes?.id === id) {
-      handleCloseModal()
+  const handleDelete = async (id: string) => {
+    if (typeof window !== 'undefined' && !window.confirm('Excluir esta solicitação do histórico?')) return
+    setDeletingId(id)
+    try {
+      await solicitacoesAPI.deleteSolicitacao(id)
+      setSolicitacoes((prev) => prev.filter((s) => s.id !== id))
+      if (solicitacaoDetalhes?.id === id) setSolicitacaoDetalhes(null)
+    } catch (e) {
+      console.error(e)
+      if (typeof window !== 'undefined') window.alert('Não foi possível excluir. Tente novamente.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
-  const handleVerDetalhes = (r: HistoricoRegistro) => {
-    setRegistroParaDetalhes(r)
-    setModalDetalhesOpen(true)
+  const handleVerDetalhes = (r: HistoricoRow) => {
+    if (r.solicitacao) setSolicitacaoDetalhes(r.solicitacao)
   }
 
   const handleCloseModal = () => {
-    setModalDetalhesOpen(false)
-    setRegistroParaDetalhes(null)
+    setSolicitacaoDetalhes(null)
   }
 
-  const handleNewRegistro = () => {
-    router.push('/dashboard/historico/novo')
-  }
-
-  const inputBase = 'w-full rounded-xl border px-4 py-2.5 text-sm outline-none bg-white border-gray-200 focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]/40'
-  const inputError = 'border-red-300'
-  const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:opacity-90 transition'
-  const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition'
+  const inputBase = 'w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none bg-white focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-shadow duration-200'
 
   return (
-    <div className="px-4 sm:px-6 py-6 w-full max-w-full">
+    <div className="px-4 sm:px-6 py-8 w-full max-w-full">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Histórico</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Boletos e notas fiscais já enviados: protocolos, datas, status e registro completo de ações.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          
-          <button
-            type="button"
-            onClick={handleNewRegistro}
-            className={btnPrimary}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 md:gap-5 mb-6 md:mb-8">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white shadow-lg shadow-[var(--primary)]/25">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Novo registro
-          </button>
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Histórico</h1>
+            <p className="text-sm text-gray-500 mt-0.5 max-w-xl">
+              Boletos e notas fiscais já enviados: protocolos, datas, status e registro completo de ações.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Filtros e Busca */}
-      <div className="mb-6 rounded-2xl bg-white border border-gray-200 p-5 shadow-sm w-full">
+      <div className="mb-6 md:mb-8 rounded-2xl bg-white border border-gray-200/80 p-4 md:p-6 shadow-xl shadow-gray-200/50 w-full">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Campo de Busca */}
           <div className="flex-1 relative">
@@ -216,7 +206,7 @@ export default function HistoricoPage() {
               </div>
               <select
                 value={filtroTipo}
-                onChange={(e) => setFiltroTipo(e.target.value as HistoricoTipo | 'todos')}
+                onChange={(e) => setFiltroTipo(e.target.value as HistoricoTipo | 'solicitacao' | 'todos')}
                 className={cn(inputBase, 'pl-11 pr-10 py-2.5 text-sm appearance-none cursor-pointer bg-white')}
               >
                 <option value="todos">Todos os tipos</option>
@@ -240,7 +230,7 @@ export default function HistoricoPage() {
               </div>
               <select
                 value={filtroStatus}
-                onChange={(e) => setFiltroStatus(e.target.value as HistoricoStatus | 'todos')}
+                onChange={(e) => setFiltroStatus(e.target.value as SolicitacaoStatusBackend | 'todos')}
                 className={cn(inputBase, 'pl-11 pr-10 py-2.5 text-sm appearance-none cursor-pointer bg-white')}
               >
                 <option value="todos">Todos os status</option>
@@ -260,11 +250,11 @@ export default function HistoricoPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setFiltroTipo('todos')
+                  setFiltroTipo('todos' as const)
                   setFiltroStatus('todos')
                   setFiltroBusca('')
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors duration-200 whitespace-nowrap"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -277,8 +267,8 @@ export default function HistoricoPage() {
 
         {/* Indicador de filtros ativos */}
         {(filtroTipo !== 'todos' || filtroStatus !== 'todos' || filtroBusca.trim()) && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
               <span className="font-medium">Filtros ativos:</span>
               {filtroBusca.trim() && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
@@ -310,7 +300,7 @@ export default function HistoricoPage() {
               )}
               {filtroStatus !== 'todos' && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Status: {STATUS_OPTS.find(s => s.value === filtroStatus)?.label}
+                  Status: {getStatusLabel(filtroStatus)}
                   <button
                     type="button"
                     onClick={() => setFiltroStatus('todos')}
@@ -329,61 +319,59 @@ export default function HistoricoPage() {
 
       {/* Layout principal: Lista */}
       <div className="w-full max-w-full">
-        {/* Lista de Registros */}
         <div className="w-full max-w-full">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-gray-900">
-              Registros {mounted ? `(${filtered.length})` : ''}
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-bold text-gray-900">
+              Registros {mounted ? <span className="text-[var(--primary)]">({filtered.length})</span> : ''}
             </h2>
           </div>
-          <div className="max-h-[calc(100vh-400px)] overflow-y-auto w-full max-w-full">
+          <div className="max-h-[calc(100vh-400px)] overflow-y-auto w-full max-w-full rounded-2xl border border-gray-200/80 bg-white shadow-xl shadow-gray-200/50">
               {!mounted ? (
-                <div className="p-8 text-center">
-                  <div className="text-sm text-gray-500">Carregando...</div>
+                <div className="p-12 flex flex-col items-center justify-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg shadow-[var(--primary)]/20">
+                    <Spinner size="md" className="border-white border-t-transparent" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600">Carregando...</p>
                 </div>
               ) : filtered.length === 0 ? (
-                <div className="p-8 text-center">
-                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-sm text-gray-500">Nenhum registro encontrado.</p>
-                  <button
-                    type="button"
-                    onClick={handleNewRegistro}
-                    className={cn(btnPrimary, 'mt-4')}
-                  >
-                    + Criar primeiro registro
-                  </button>
+                <div className="p-12 text-center">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center mx-auto mb-5 shadow-inner border border-gray-100">
+                    <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-base font-semibold text-gray-700">Nenhuma solicitação encontrada.</p>
+                  <p className="text-sm text-gray-500 mt-1">Ajuste os filtros ou abra uma solicitação pelo Dashboard.</p>
                 </div>
               ) : (
                 <>
                   {/* Cards para Mobile e Tablet */}
-                  <div className="lg:hidden space-y-4 w-full p-4">
+                  <div className="lg:hidden space-y-3 w-full p-4">
                     {filtered.map((r) => (
                       <div
                         key={r.id}
-                        className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow w-full"
+                        className="rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-[var(--primary)]/20 transition-all duration-200 w-full p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <div className="font-semibold text-gray-900 truncate">{r.titulo}</div>
+                            <div className="font-semibold text-slate-900 truncate">{r.titulo}</div>
                             <div className="mt-2 flex flex-wrap gap-1.5 items-center">
                               <BadgeTipo tipo={r.tipo} />
                               <BadgeStatus status={r.status} />
-                              <span className="text-xs text-gray-500 font-mono">{r.protocolo}</span>
+                              <span className="text-xs text-slate-500 font-mono">{r.protocolo}</span>
                             </div>
-                            <div className="mt-2 text-xs text-gray-500">
+                            <div className="mt-2 text-xs text-slate-500">
                               {formatarData(r.data)} às {r.horario}
                             </div>
                             {r.descricao && (
-                              <p className="mt-2 text-sm text-gray-600 line-clamp-2">{r.descricao}</p>
+                              <p className="mt-2 text-sm text-slate-600 line-clamp-2">{r.descricao}</p>
                             )}
                           </div>
                           <div className="flex gap-1 shrink-0">
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); handleVerDetalhes(r) }}
-                              className="w-8 h-8 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition"
+                              className="w-9 h-9 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50 flex items-center justify-center transition-colors duration-200"
                               title="Ver detalhes"
                             >
                               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -393,24 +381,18 @@ export default function HistoricoPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={(e) => { e.stopPropagation(); handleEdit(r) }}
-                              className="w-8 h-8 rounded-lg text-gray-400 hover:text-[var(--primary)] hover:bg-[rgba(3,154,66,0.08)] flex items-center justify-center transition"
-                              title="Editar"
-                            >
-                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5Z" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); handleDelete(r.id) }}
-                              className="w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition"
+                              onClick={(e) => { e.stopPropagation(); deletingId !== r.id && handleDelete(r.id) }}
+                              disabled={deletingId === r.id}
+                              className="w-9 h-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors duration-200 disabled:opacity-50 min-w-[44px] min-h-[44px]"
                               title="Excluir"
                             >
-                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" />
-                              </svg>
+                              {deletingId === r.id ? (
+                                <Spinner size="sm" className="border-red-500 border-t-transparent" />
+                              ) : (
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" />
+                                </svg>
+                              )}
                             </button>
                           </div>
                         </div>
@@ -421,65 +403,65 @@ export default function HistoricoPage() {
                   {/* Tabela para Desktop (acima de 1024px) */}
                   <div className="hidden lg:block overflow-x-auto w-full max-w-full">
                     <table className="w-full max-w-full" style={{ width: '100%', maxWidth: '100%' }}>
-                      <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                      <thead className="bg-gradient-to-r from-gray-50 to-gray-50/80 border-b border-gray-200 sticky top-0 z-10">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          <th className="px-5 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                             Título
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          <th className="px-5 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                             Tipo / Status
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          <th className="px-5 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                             Protocolo
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          <th className="px-5 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                             Data / Horário
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          <th className="px-5 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                             Descrição
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">
+                          <th className="px-5 py-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider w-28">
                             Ações
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-100">
+                      <tbody className="bg-white divide-y divide-slate-100">
                         {filtered.map((r) => (
                           <tr
                             key={r.id}
-                            className="hover:bg-gray-50 transition"
+                            className="hover:bg-slate-50/70 transition-colors duration-150"
                           >
-                            <td className="px-4 py-3">
-                              <div className="text-sm font-semibold text-gray-900">{r.titulo}</div>
+                            <td className="px-5 py-3.5">
+                              <div className="text-sm font-semibold text-slate-900">{r.titulo}</div>
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-5 py-3.5">
                               <div className="flex flex-wrap gap-1.5 items-center">
                                 <BadgeTipo tipo={r.tipo} />
                                 <BadgeStatus status={r.status} />
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <span className="text-xs text-gray-500 font-mono">{r.protocolo}</span>
+                            <td className="px-5 py-3.5">
+                              <span className="text-xs text-slate-500 font-mono">{r.protocolo}</span>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm text-gray-900">
+                            <td className="px-5 py-3.5">
+                              <div className="text-sm text-slate-900">
                                 {formatarData(r.data)}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-slate-500">
                                 {r.horario}
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm text-gray-600 max-w-xs truncate" title={r.descricao || undefined}>
+                            <td className="px-5 py-3.5">
+                              <div className="text-sm text-slate-600 max-w-xs truncate" title={r.descricao || undefined}>
                                 {r.descricao || '—'}
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
+                            <td className="px-5 py-3.5 text-right">
+                              <div className="flex items-center justify-end gap-0.5">
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); handleVerDetalhes(r) }}
-                                  className="w-8 h-8 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition"
+                                  className="w-9 h-9 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50 flex items-center justify-center transition-colors duration-200"
                                   title="Ver detalhes"
                                 >
                                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -489,24 +471,18 @@ export default function HistoricoPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleEdit(r) }}
-                                  className="w-8 h-8 rounded-lg text-gray-400 hover:text-[var(--primary)] hover:bg-[rgba(3,154,66,0.08)] flex items-center justify-center transition"
-                                  title="Editar"
-                                >
-                                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5Z" strokeLinecap="round" strokeLinejoin="round" />
-                                  </svg>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(r.id) }}
-                                  className="w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition"
+                                  onClick={(e) => { e.stopPropagation(); deletingId !== r.id && handleDelete(r.id) }}
+                                  disabled={deletingId === r.id}
+                                  className="w-9 h-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors duration-200 disabled:opacity-50 min-w-[44px] min-h-[44px]"
                                   title="Excluir"
                                 >
-                                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" />
-                                  </svg>
+                                  {deletingId === r.id ? (
+                                    <Spinner size="sm" className="border-red-500 border-t-transparent" />
+                                  ) : (
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" />
+                                    </svg>
+                                  )}
                                 </button>
                               </div>
                             </td>
@@ -521,101 +497,12 @@ export default function HistoricoPage() {
         </div>
       </div>
 
-      {/* Modal de Detalhes */}
-      {modalDetalhesOpen && registroParaDetalhes && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseModal} aria-hidden="true" />
-          <div className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Detalhes do registro</h2>
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-                aria-label="Fechar"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              <dl className="space-y-4 text-sm">
-                <div>
-                  <dt className="text-gray-500 font-medium mb-1">Protocolo</dt>
-                  <dd className="font-mono text-gray-900">{registroParaDetalhes.protocolo}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500 font-medium mb-1">Tipo / Status</dt>
-                  <dd className="flex gap-2">
-                    <BadgeTipo tipo={registroParaDetalhes.tipo} />
-                    <BadgeStatus status={registroParaDetalhes.status} />
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500 font-medium mb-1">Data e horário</dt>
-                  <dd className="text-gray-900">{formatarData(registroParaDetalhes.data)} às {registroParaDetalhes.horario}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500 font-medium mb-1">Título</dt>
-                  <dd className="text-gray-900">{registroParaDetalhes.titulo}</dd>
-                </div>
-                {registroParaDetalhes.descricao && (
-                  <div>
-                    <dt className="text-gray-500 font-medium mb-1">Descrição</dt>
-                    <dd className="text-gray-900">{registroParaDetalhes.descricao}</dd>
-                  </div>
-                )}
-                {registroParaDetalhes.origem && (
-                  <div>
-                    <dt className="text-gray-500 font-medium mb-1">Origem / CNPJ</dt>
-                    <dd className="text-gray-900 font-mono">{registroParaDetalhes.origem}</dd>
-                  </div>
-                )}
-                {registroParaDetalhes.valor && (
-                  <div>
-                    <dt className="text-gray-500 font-medium mb-1">Valor</dt>
-                    <dd className="text-gray-900 font-semibold text-lg">{registroParaDetalhes.valor}</dd>
-                  </div>
-                )}
-                {registroParaDetalhes.observacoes && (
-                  <div>
-                    <dt className="text-gray-500 font-medium mb-1">Observações</dt>
-                    <dd className="text-gray-900">{registroParaDetalhes.observacoes}</dd>
-                  </div>
-                )}
-                {registroParaDetalhes.dataAtualizacao && (
-                  <div>
-                    <dt className="text-gray-500 font-medium mb-1">Última atualização</dt>
-                    <dd className="text-gray-900 text-xs">{new Date(registroParaDetalhes.dataAtualizacao).toLocaleString('pt-BR')}</dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  handleCloseModal()
-                  handleEdit(registroParaDetalhes)
-                }}
-                className={btnPrimary}
-              >
-                Editar registro
-              </button>
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className={btnSecondary}
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal de Detalhes da Solicitação */}
+      <SolicitacaoDetalhesModal
+        isOpen={!!solicitacaoDetalhes}
+        solicitacao={solicitacaoDetalhes}
+        onClose={handleCloseModal}
+      />
     </div>
   )
 }

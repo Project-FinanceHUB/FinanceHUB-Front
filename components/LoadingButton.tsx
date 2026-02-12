@@ -1,6 +1,6 @@
 'use client'
 
-import { Skeleton } from './Skeleton'
+import Spinner from './Spinner'
 
 interface LoadingButtonProps {
   isLoading?: boolean
@@ -8,6 +8,8 @@ interface LoadingButtonProps {
   className?: string
   disabled?: boolean
   variant?: 'primary' | 'secondary' | 'danger'
+  type?: 'button' | 'submit' | 'reset'
+  onClick?: () => void
 }
 
 export default function LoadingButton({
@@ -16,28 +18,37 @@ export default function LoadingButton({
   className = '',
   disabled = false,
   variant = 'primary',
+  type = 'button',
+  onClick,
 }: LoadingButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
-  
+  const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]'
+
   const variantClasses = {
     primary: 'bg-[var(--primary)] text-white hover:bg-[var(--accent)] shadow-lg hover:shadow-xl',
     secondary: 'bg-white text-[var(--primary)] border-2 border-[var(--primary)] hover:bg-[var(--primary)]/5',
     danger: 'bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl',
   }
-  
+
+  const spinnerColor = variant === 'primary' || variant === 'danger' ? 'border-white border-t-transparent' : 'border-[var(--primary)] border-t-transparent'
+
   if (isLoading) {
     return (
-      <div className={`${baseClasses} ${variantClasses[variant]} ${className}`}>
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-        <span className="opacity-75">{children}</span>
+      <div
+        className={`${baseClasses} ${variantClasses[variant]} ${className} cursor-wait`}
+        aria-busy="true"
+      >
+        <Spinner size="sm" className={spinnerColor} />
+        <span className="opacity-90">{children}</span>
       </div>
     )
   }
-  
+
   return (
     <button
+      type={type}
       className={`${baseClasses} ${variantClasses[variant]} ${className}`}
-      disabled={disabled || isLoading}
+      disabled={disabled}
+      onClick={onClick}
     >
       {children}
     </button>

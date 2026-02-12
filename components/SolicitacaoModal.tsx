@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { Solicitacao } from '@/types/solicitacao'
 import type { Company } from '@/types/company'
 import SolicitacaoForm from './SolicitacaoForm'
@@ -15,6 +15,8 @@ type SolicitacaoModalProps = {
 }
 
 export default function SolicitacaoModal({ isOpen, solicitacao, companies, onClose, onSubmit }: SolicitacaoModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -28,9 +30,16 @@ export default function SolicitacaoModal({ isOpen, solicitacao, companies, onClo
 
   if (!isOpen) return null
 
-  const handleSubmit = (data: SolicitacaoFormData) => {
-    onSubmit(data)
-    onClose()
+  const handleSubmit = async (data: SolicitacaoFormData) => {
+    setIsSubmitting(true)
+    try {
+      await (onSubmit as (data: SolicitacaoFormData) => void | Promise<void>)(data)
+      onClose()
+    } catch {
+      // Erro já tratado pelo caller (toast)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -72,7 +81,7 @@ export default function SolicitacaoModal({ isOpen, solicitacao, companies, onClo
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50/30">
-          <SolicitacaoForm solicitacao={solicitacao} companies={companies} onSubmit={handleSubmit} onCancel={onClose} />
+          <SolicitacaoForm solicitacao={solicitacao} companies={companies} onSubmit={handleSubmit} onCancel={onClose} isSubmitting={isSubmitting} />
         </div>
       </div>
     </div>

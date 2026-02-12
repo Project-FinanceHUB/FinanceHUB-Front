@@ -94,3 +94,16 @@ body {
   );
   background-size: 1000px 100%;
 }
+
+/* Shimmer com cor do projeto (primary) */
+.animate-shimmer-brand {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    to right,
+    rgba(3, 154, 66, 0.06) 0%,
+    rgba(3, 154, 66, 0.14) 35%,
+    rgba(3, 154, 66, 0.06) 70%,
+    rgba(3, 154, 66, 0.06) 100%
+  );
+  background-size: 1000px 100%;
+}

@@ -100,10 +100,8 @@ export default function EditarRegistroPage() {
     router.push('/dashboard/historico')
   }
 
-  const inputBase = 'w-full rounded-xl border px-4 py-2.5 text-sm outline-none bg-white border-gray-200 focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]/40'
-  const inputError = 'border-red-300'
-  const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:opacity-90 transition'
-  const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition'
+  const inputBase = 'w-full rounded-xl border-2 border-gray-200 px-4 py-2.5 text-sm outline-none bg-white focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all duration-200'
+  const inputError = 'border-red-300 bg-red-50/50'
 
   if (loading) {
     return (
@@ -117,25 +115,38 @@ export default function EditarRegistroPage() {
     <div className="px-4 sm:px-6 py-6 w-full max-w-full">
       <div className="max-w-4xl mx-auto">
         {/* Cabeçalho */}
-        <div className="mb-6">
+        <div className="mb-6 md:mb-8">
           <button
             type="button"
             onClick={handleCancel}
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4 min-h-[44px] rounded-xl px-2 -ml-2 hover:bg-gray-100 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Voltar para histórico
           </button>
-          <h1 className="text-2xl font-semibold text-gray-900">Editar registro</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Atualize as informações do registro do histórico.
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white shadow-lg shadow-[var(--primary)]/25">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5Z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Editar registro</h1>
+              <p className="text-sm text-gray-500 mt-0.5">Atualize as informações do registro do histórico.</p>
+            </div>
+          </div>
         </div>
 
         {/* Formulário */}
-        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+        <div className="rounded-2xl bg-white border border-gray-200/80 shadow-xl shadow-gray-200/50 overflow-hidden">
+          <div className="p-4 md:p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50/80 to-white">
+            <h2 className="text-base font-bold text-gray-900">Dados do registro</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Altere os campos conforme necessário.</p>
+          </div>
+          <div className="p-4 md:p-6">
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -260,13 +271,22 @@ export default function EditarRegistroPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
-              <button type="button" onClick={handleSave} className={btnPrimary}>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-5 py-3 text-sm font-bold shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl transition-all duration-200"
+              >
                 Salvar alterações
               </button>
-              <button type="button" onClick={handleCancel} className={btnSecondary}>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+              >
                 Cancelar
               </button>
             </div>
+          </div>
           </div>
         </div>
       </div>

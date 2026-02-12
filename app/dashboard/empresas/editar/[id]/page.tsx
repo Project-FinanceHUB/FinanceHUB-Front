@@ -88,25 +88,38 @@ export default function EditarEmpresaPage() {
     <div className="px-4 sm:px-6 py-6 w-full max-w-full">
       <div className="max-w-4xl mx-auto">
         {/* Cabeçalho */}
-        <div className="mb-6">
+        <div className="mb-6 md:mb-8">
           <button
             type="button"
             onClick={handleCancel}
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4 min-h-[44px] rounded-xl px-2 -ml-2 hover:bg-gray-100 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Voltar para empresas
           </button>
-          <h1 className="text-2xl font-semibold text-gray-900">Editar empresa</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Atualize as informações da empresa.
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white shadow-lg shadow-[var(--primary)]/25">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5Z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Editar empresa</h1>
+              <p className="text-sm text-gray-500 mt-0.5">Atualize as informações da empresa.</p>
+            </div>
+          </div>
         </div>
 
         {/* Formulário */}
-        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+        <div className="rounded-2xl bg-white border border-gray-200/80 shadow-xl shadow-gray-200/50 overflow-hidden">
+          <div className="p-4 md:p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50/80 to-white">
+            <h2 className="text-base font-bold text-gray-900">Dados da empresa</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Altere razão social e CNPJs conforme necessário.</p>
+          </div>
+          <div className="p-4 md:p-6">
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -186,7 +199,7 @@ export default function EditarEmpresaPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                className={btnPrimary}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-5 py-3 text-sm font-bold shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl transition-all duration-200"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -196,11 +209,12 @@ export default function EditarEmpresaPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className={btnSecondary}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
               >
                 Cancelar
               </button>
             </div>
+          </div>
           </div>
         </div>
       </div>
