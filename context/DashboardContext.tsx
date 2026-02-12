@@ -26,27 +26,31 @@ const DashboardContext = createContext<DashboardContextValue | null>(null)
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [companies, setCompanies] = useState<Company[]>([])
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([])
-  const [loading, setLoading] = useState(true)
+  const [companiesLoading, setCompaniesLoading] = useState(true)
+  const [solicitacoesLoading, setSolicitacoesLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const [companiesModalOpen, setCompaniesModalOpen] = useState(false)
 
   const loadSolicitacoes = useCallback(async () => {
     try {
+      setSolicitacoesLoading(true)
       const { solicitacoes: list } = await solicitacoesAPI.getSolicitacoes({ page: 1, limit: 500 })
       setSolicitacoes(list)
     } catch (err: any) {
       console.error('Erro ao carregar solicitações da API:', err)
       setSolicitacoes([])
+    } finally {
+      setSolicitacoesLoading(false)
     }
   }, [])
 
   // Carregar empresas apenas da API do backend (sem dados mock)
   useEffect(() => {
     const loadCompanies = async () => {
-      setLoading(true)
       setError(null)
       try {
+        setCompaniesLoading(true)
         const data = await companyAPI.getCompanies()
         setCompanies(data || [])
         if (typeof window !== 'undefined' && data?.length) {
@@ -57,14 +61,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setCompanies([])
         setError('Erro ao carregar empresas. Conecte-se ao backend.')
       } finally {
-        setLoading(false)
+        setCompaniesLoading(false)
       }
     }
 
     if (typeof window !== 'undefined') {
       loadCompanies()
     } else {
-      setLoading(false)
+      setCompaniesLoading(false)
     }
   }, [])
 
@@ -81,6 +85,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies))
     }
   }, [companies])
+
+  const loading = companiesLoading || solicitacoesLoading
 
   const addSolicitacao = useCallback(
     async (formData: SolicitacaoFormData) => {
