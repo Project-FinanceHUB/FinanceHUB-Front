@@ -7,31 +7,26 @@ import EmailInput from './EmailInput'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import * as authAPI from '@/lib/api/auth'
-import * as userAPI from '@/lib/api/users'
 
 export default function HeroSection() {
   const router = useRouter()
   const { login, isAuthenticated } = useAuth()
   const toast = useToast()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
   const [showEmConstrucao, setShowEmConstrucao] = useState(false)
-  const [code, setCode] = useState('')
-  const [codeSent, setCodeSent] = useState(false)
-  const [emailEnviado, setEmailEnviado] = useState('')
-  const [isSending, setIsSending] = useState(false)
-  const [erroEmail, setErroEmail] = useState('')
-  const [erroCodigo, setErroCodigo] = useState('')
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [countdown, setCountdown] = useState(0)
+  const [loginErro, setLoginErro] = useState('')
+  const [isLoginLoading, setIsLoginLoading] = useState(false)
   const emailInputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
-  
+
   // Signup states
   const [nome, setNome] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
   const [role, setRole] = useState<'admin' | 'gerente' | 'usuario'>('usuario')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [erroSignup, setErroSignup] = useState('')
@@ -85,137 +80,76 @@ export default function HeroSection() {
     }
   }, [showGallery, showEmConstrucao])
 
-  // Resetar estados de login quando não estiver autenticado (após logout)
   useEffect(() => {
     if (!isAuthenticated) {
-      // Resetar todos os estados de login
       setEmail('')
-      setCode('')
-      setCodeSent(false)
-      setEmailEnviado('')
-      setErroEmail('')
-      setErroCodigo('')
-      setCountdown(0)
-      setIsSending(false)
-      setIsVerifying(false)
-      // Fechar modais de login/signup se estiverem abertos
+      setPassword('')
+      setLoginErro('')
       setShowLogin(false)
       setShowSignup(false)
     }
   }, [isAuthenticated])
 
-  // Função para resetar todos os estados de login
   const resetLoginState = () => {
     setEmail('')
-    setCode('')
-    setCodeSent(false)
-    setEmailEnviado('')
-    setErroEmail('')
-    setErroCodigo('')
-    setCountdown(0)
-    setIsSending(false)
-    setIsVerifying(false)
+    setPassword('')
+    setLoginErro('')
   }
 
-  const isValidEmail = (val: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val || '').trim())
-  }
+  const isValidEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val || '').trim())
 
-  const enviarCodigo = async () => {
-    setErroEmail('')
-    const emailValue = email.trim()
-    
-    if (!isValidEmail(emailValue)) {
-      setErroEmail('Digite um e-mail válido para continuar.')
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginErro('')
+    const emailVal = email.trim()
+    if (!isValidEmail(emailVal)) {
+      setLoginErro('Digite um e-mail válido.')
       return
     }
-    
-    setIsSending(true)
-    
-    try {
-      await authAPI.sendAuthCode(emailValue)
-      setEmailEnviado(emailValue)
-      setCodeSent(true)
-      setCountdown(60)
-      
-      const interval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    } catch (error: any) {
-      const errorMessage = error.message || 'Erro ao enviar código. Verifique se o backend está rodando.'
-      setErroEmail(errorMessage)
-      toast.error(errorMessage)
-    } finally {
-      setIsSending(false)
+    if (!password.trim()) {
+      setLoginErro('Digite sua senha.')
+      return
     }
-  }
-
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (code.length !== 6) return
-
-    setIsVerifying(true)
-    setErroCodigo('')
-    
+    setIsLoginLoading(true)
     try {
-      await login(emailEnviado || email, code)
+      await login(emailVal, password)
       toast.success('Login realizado com sucesso!')
       resetLoginState()
+      setShowLogin(false)
       router.push('/dashboard')
-    } catch (error: any) {
-      const errorMessage = error.message || 'Código inválido. Tente novamente.'
-      setErroCodigo(errorMessage)
-      setIsVerifying(false)
-      toast.error(errorMessage)
+    } catch (err: any) {
+      const msg = err.message || 'E-mail ou senha incorretos. Tente novamente.'
+      setLoginErro(msg)
+      toast.error(msg)
+    } finally {
+      setIsLoginLoading(false)
     }
   }
 
-  const handleResendCode = async () => {
-    if (countdown > 0) return
-    setCodeSent(false)
-    setCode('')
-    setErroCodigo('')
-    await enviarCodigo()
-  }
-
-  const handleChangeEmail = () => {
-    setCodeSent(false)
-    setCode('')
-    setErroCodigo('')
-  }
-
-  // Signup functions
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErroSignup('')
     setSucessoSignup(false)
-
     if (!nome.trim()) {
       setErroSignup('Nome é obrigatório')
       return
     }
-
     if (!isValidEmail(signupEmail)) {
       setErroSignup('Digite um e-mail válido')
       return
     }
-
+    if (!signupPassword || signupPassword.length < 6) {
+      setErroSignup('A senha deve ter no mínimo 6 caracteres')
+      return
+    }
     setIsSubmitting(true)
-
     try {
-      await userAPI.createUser({
+      await authAPI.register({
         nome: nome.trim(),
         email: signupEmail.trim(),
+        password: signupPassword,
         role,
-        ativo: true,
       })
-
       toast.success('Conta criada com sucesso! Redirecionando...')
       setSucessoSignup(true)
       setTimeout(() => {
@@ -223,11 +157,11 @@ export default function HeroSection() {
         setSucessoSignup(false)
         setNome('')
         setSignupEmail('')
+        setSignupPassword('')
         setRole('usuario')
         router.push('/?cadastro=sucesso')
       }, 2000)
     } catch (error) {
-      console.error('Erro ao cadastrar:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.'
       setErroSignup(errorMessage)
       setIsSubmitting(false)
@@ -475,150 +409,73 @@ export default function HeroSection() {
               </svg>
             </button>
 
-            {/* Modal Content */}
+            {/* Modal Content - Login com e-mail e senha */}
             <div className="p-8">
-              {codeSent ? (
-                <>
-                  {/* Verification Code Step */}
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[var(--primary)]/10 to-[var(--accent)]/10 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Verifique seu e-mail
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      Enviamos um código de 6 dígitos para
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 mt-1">
-                      {emailEnviado || email}
-                    </p>
-                  </div>
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Acessar conta
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Digite seu e-mail e senha para entrar
+                </p>
+              </div>
 
-                  <form onSubmit={handleVerifyCode} className="space-y-6">
-                    <div>
-                      <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">
-                        Código de verificação
-                      </label>
-                      <input
-                        type="text"
-                        id="code"
-                        value={code}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 6)
-                          setCode(value)
-                        }}
-                        placeholder="000000"
-                        maxLength={6}
-                        className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all bg-white text-gray-900 placeholder-gray-400 border-gray-300"
-                        autoFocus
-                      />
-                      {erroCodigo && (
-                        <p className="text-sm text-red-600 mt-2 text-center">{erroCodigo}</p>
-                      )}
-                    </div>
+              <form onSubmit={handleLoginSubmit} className="space-y-6">
+                <div>
+                  <EmailInput
+                    ref={emailInputRef}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    isValid={email.length > 0 ? isValidEmail(email) : undefined}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                    Senha
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all bg-white text-gray-900 placeholder-gray-400 border-gray-300"
+                  />
+                </div>
+                {loginErro && (
+                  <p className="text-sm text-red-600 text-center">{loginErro}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={isLoginLoading}
+                  className="w-full py-3 px-4 bg-[var(--primary)] text-white font-semibold rounded-xl shadow-lg hover:bg-[var(--accent)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  {isLoginLoading ? 'Entrando...' : 'Entrar'}
+                </button>
 
+                <div className="text-center pt-4 border-t border-gray-200">
+                  <p className="text-sm text-gray-600">
+                    Não tem uma conta?{' '}
                     <button
-                      type="submit"
-                      disabled={code.length !== 6 || isVerifying}
-                      className="w-full py-3 px-4 bg-[var(--primary)] text-white font-semibold rounded-xl shadow-lg hover:bg-[var(--accent)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+                      type="button"
+                      onClick={() => {
+                        resetLoginState()
+                        setShowLogin(false)
+                        setShowSignup(true)
+                      }}
+                      className="text-[var(--primary)] hover:text-[var(--accent)] font-medium transition-colors"
                     >
-                      {isVerifying ? 'Verificando...' : 'Verificar código'}
+                      Criar conta
                     </button>
-
-                    <div className="text-center space-y-2">
-                      <div>
-                        {countdown > 0 ? (
-                          <p className="text-sm text-gray-500">
-                            Reenviar código em {countdown}s
-                          </p>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleResendCode}
-                            className="text-sm text-[var(--primary)] hover:text-[var(--accent)] transition-colors font-medium"
-                          >
-                            Reenviar código
-                          </button>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleChangeEmail}
-                        className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                      >
-                        Alterar e-mail
-                      </button>
-                    </div>
-                  </form>
-                </>
-              ) : (
-                <>
-                  {/* Email Input Step */}
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Acessar conta
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      Digite seu e-mail e enviaremos um código de verificação
-                    </p>
-                  </div>
-
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      if (isValidEmail(email) && !isSending) {
-                        enviarCodigo()
-                      }
-                    }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <EmailInput
-                        ref={emailInputRef}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        isValid={email.length > 0 ? isValidEmail(email) : undefined}
-                      />
-                      {erroEmail && (
-                        <p className="text-sm text-red-600 mt-2 text-center">{erroEmail}</p>
-                      )}
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isSending || !isValidEmail(email)}
-                      className="w-full py-3 px-4 bg-[var(--primary)] text-white font-semibold rounded-xl shadow-lg hover:bg-[var(--accent)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      {isSending ? 'Enviando...' : 'Enviar código'}
-                    </button>
-
-                    <div className="text-center pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-600">
-                        Não tem uma conta?{' '}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            resetLoginState()
-                            setShowLogin(false)
-                            setShowSignup(true)
-                          }}
-                          className="text-[var(--primary)] hover:text-[var(--accent)] font-medium transition-colors"
-                        >
-                          Criar conta
-                        </button>
-                      </p>
-                    </div>
-                  </form>
-                </>
-              )}
+                  </p>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -703,6 +560,25 @@ export default function HeroSection() {
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
                         isValid={signupEmail.length > 0 ? isValidEmail(signupEmail) : undefined}
+                      />
+                    </div>
+
+                    {/* Senha */}
+                    <div>
+                      <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-2">
+                        Senha
+                      </label>
+                      <input
+                        type="password"
+                        id="signup-password"
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        minLength={6}
+                        autoComplete="new-password"
+                        className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all bg-white text-gray-900 placeholder-gray-400 border-gray-300"
+                        disabled={isSubmitting}
+                        required
                       />
                     </div>
 

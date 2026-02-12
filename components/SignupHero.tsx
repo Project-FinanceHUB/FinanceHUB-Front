@@ -4,12 +4,13 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import EmailInput from './EmailInput'
-import * as userAPI from '@/lib/api/users'
+import * as authAPI from '@/lib/api/auth'
 
 export default function SignupHero() {
   const router = useRouter()
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [role, setRole] = useState<'admin' | 'gerente' | 'usuario'>('usuario')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [erro, setErro] = useState('')
@@ -32,36 +33,33 @@ export default function SignupHero() {
     e.preventDefault()
     setErro('')
     setSucesso(false)
-
-    // Validações
     if (!nome.trim()) {
       setErro('Nome é obrigatório')
       return
     }
-
     if (!isValidEmail(email)) {
       setErro('Digite um e-mail válido')
       return
     }
-
+    if (!password || password.length < 6) {
+      setErro('A senha deve ter no mínimo 6 caracteres')
+      return
+    }
     setIsSubmitting(true)
-
     try {
-      await userAPI.createUser({
+      await authAPI.register({
         nome: nome.trim(),
         email: email.trim(),
+        password,
         role,
-        ativo: true,
       })
-
       setSucesso(true)
       setTimeout(() => {
         router.push('/?cadastro=sucesso')
       }, 2000)
     } catch (error) {
       console.error('Erro ao cadastrar:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.'
-      setErro(errorMessage)
+      setErro(error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.')
       setIsSubmitting(false)
     }
   }
@@ -260,6 +258,25 @@ export default function SignupHero() {
                         />
                       </div>
 
+                      {/* Senha */}
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                          Senha
+                        </label>
+                        <input
+                          type="password"
+                          id="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Mínimo 6 caracteres"
+                          minLength={6}
+                          autoComplete="new-password"
+                          className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all bg-white text-gray-900 placeholder-gray-400 border-gray-300"
+                          disabled={isSubmitting}
+                          required
+                        />
+                      </div>
+
                       {/* Role */}
                       <div>
                         <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
@@ -291,7 +308,7 @@ export default function SignupHero() {
                       {/* Botão Submit */}
                       <button
                         type="submit"
-                        disabled={isSubmitting || !nome.trim() || !isValidEmail(email)}
+                        disabled={isSubmitting || !nome.trim() || !isValidEmail(email) || !password || password.length < 6}
                         className="w-full py-3 px-4 bg-[var(--primary)] text-white font-semibold rounded-xl shadow-lg hover:bg-[var(--accent)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
                       >
                         {isSubmitting ? 'Criando conta...' : 'Criar conta'}

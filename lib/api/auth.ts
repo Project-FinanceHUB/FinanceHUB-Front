@@ -154,6 +154,44 @@ export async function validateSession(token: string): Promise<ValidateSessionRes
 }
 
 /**
+ * Cadastro pelo backend: conta criada já confirmada, sem e-mail de confirmação.
+ */
+export async function register(data: {
+  nome: string
+  email: string
+  password: string
+  role?: 'admin' | 'gerente' | 'usuario'
+}): Promise<{ success: boolean; message: string; user: { id: string; nome: string; email: string; role: string } }> {
+  const response = await fetch(`${API_URL}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  const result = await response.json().catch(() => ({ error: 'Erro ao processar resposta' }))
+  if (!response.ok) throw new Error(result.error || result.message || 'Erro ao criar conta')
+  return result
+}
+
+/**
+ * Sincroniza perfil após cadastro com Supabase Auth (email/senha).
+ */
+export async function syncProfile(token: string, data: { nome: string; role?: string }): Promise<{ user: { id: string; nome: string; email: string; role: string } }> {
+  const response = await fetch(`${API_URL}/api/auth/sync-profile`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Erro ao sincronizar perfil' }))
+    throw new Error(err.error || err.message || 'Erro ao sincronizar perfil')
+  }
+  return response.json()
+}
+
+/**
  * Faz logout
  */
 export async function logout(token: string): Promise<void> {

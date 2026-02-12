@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import * as authAPI from '@/lib/api/auth'
+import { createClient } from '@/lib/supabase/client'
 
 type User = {
   id: string
@@ -15,8 +16,7 @@ type AuthContextValue = {
   token: string | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, code: string) => Promise<void>
-  sendCode: (email: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   validateSession: () => Promise<boolean>
 }
@@ -30,8 +30,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClient()
 
-  // Carregar sessão do localStorage ao iniciar
+  const persistSession = (newToken: string, newUser: User) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TOKEN_KEY, newToken)
+      localStorage.setItem(USER_KEY, JSON.stringify(newUser))
+      document.cookie = `auth_token=${newToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
+    }
+  }
+
+  const clearSession = () => {
+    setToken(null)
+    setUser(null)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(USER_KEY)
+      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    }
+  }
+
+  // Carregar sessão ao iniciar (localStorage ou Supabase)
   useEffect(() => {
     const loadSession = async () => {
       if (typeof window === 'undefined') {
@@ -40,29 +59,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
+        // 1) Tentar sessão do Supabase (login com email/senha)
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          const validation = await authAPI.validateSession(session.access_token)
+          if (validation.valid && validation.session) {
+            setToken(session.access_token)
+            setUser(validation.session.user)
+            persistSession(session.access_token, validation.session.user)
+            setIsLoading(false)
+            return
+          }
+        }
+
+        // 2) Fallback: token salvo no localStorage (ex.: sessão antiga)
         const savedToken = localStorage.getItem(TOKEN_KEY)
         const savedUser = localStorage.getItem(USER_KEY)
-
         if (savedToken && savedUser) {
-          // Validar token com o backend
           const validation = await authAPI.validateSession(savedToken)
-          
           if (validation.valid && validation.session) {
             setToken(savedToken)
             setUser(validation.session.user)
-            // Atualizar cookie também
             document.cookie = `auth_token=${savedToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
           } else {
-            // Token inválido, limpar
-            localStorage.removeItem(TOKEN_KEY)
-            localStorage.removeItem(USER_KEY)
-            document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+            clearSession()
           }
         }
       } catch (error) {
         console.error('Erro ao carregar sessão:', error)
-        localStorage.removeItem(TOKEN_KEY)
-        localStorage.removeItem(USER_KEY)
+        clearSession()
       } finally {
         setIsLoading(false)
       }
@@ -71,85 +96,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadSession()
   }, [])
 
-  const sendCode = async (email: string) => {
-    await authAPI.sendAuthCode(email)
-  }
-
-  const login = async (email: string, code: string) => {
-    try {
-      console.log('[AuthContext] Iniciando login...')
-      const response = await authAPI.verifyCode(email, code)
-      
-      console.log('[AuthContext] Resposta recebida:', { 
-        success: response.success, 
-        hasToken: !!response.token, 
-        hasUser: !!response.user 
-      })
-      
-      if (response.success && response.token && response.user) {
-        setToken(response.token)
-        setUser(response.user)
-        
-        // Salvar no localStorage e cookies
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(TOKEN_KEY, response.token)
-          localStorage.setItem(USER_KEY, JSON.stringify(response.user))
-          
-          // Salvar também no cookie para o middleware funcionar
-          document.cookie = `auth_token=${response.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
-          
-          console.log('[AuthContext] Token e usuário salvos no localStorage e cookies')
-        }
-        
-        console.log('[AuthContext] Login realizado com sucesso!')
-      } else {
-        console.error('[AuthContext] Resposta inválida:', response)
-        throw new Error(response.error || 'Erro ao fazer login')
-      }
-    } catch (error: any) {
-      console.error('[AuthContext] Erro no login:', error)
-      throw error
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      const msg = error.message
+      if (msg === 'Invalid login credentials') throw new Error('E-mail ou senha incorretos.')
+      if (msg === 'Email not confirmed') throw new Error('E-mail ainda não confirmado. Verifique sua caixa de entrada (e spam) e clique no link enviado.')
+      throw new Error(msg)
     }
+
+    const accessToken = data.session?.access_token
+    if (!accessToken) throw new Error('Erro ao obter sessão.')
+
+    const validation = await authAPI.validateSession(accessToken)
+    if (!validation.valid || !validation.session) throw new Error('Erro ao carregar perfil.')
+
+    setToken(accessToken)
+    setUser(validation.session.user)
+    persistSession(accessToken, validation.session.user)
   }
 
   const logout = async () => {
-    if (token) {
-      try {
-        await authAPI.logout(token)
-      } catch (error) {
-        console.error('Erro ao fazer logout:', error)
-      }
+    try {
+      await supabase.auth.signOut()
+    } catch (e) {
+      console.error('Erro ao fazer signOut no Supabase:', e)
     }
-
-    setToken(null)
-    setUser(null)
-
-    // Limpar localStorage e cookies
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(USER_KEY)
-      // Remover cookie
-      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    try {
+      if (token) await authAPI.logout(token)
+    } catch (e) {
+      console.error('Erro ao fazer logout no backend:', e)
     }
+    clearSession()
   }
 
   const validateSession = async (): Promise<boolean> => {
     if (!token) return false
-
     try {
       const validation = await authAPI.validateSession(token)
-      
       if (validation.valid && validation.session) {
         setUser(validation.session.user)
         return true
-      } else {
-        await logout()
-        return false
       }
-    } catch (error) {
-      await logout()
-      return false
+    } catch {
+      // ignore
     }
+    clearSession()
+    return false
   }
 
   const value: AuthContextValue = {
@@ -158,7 +151,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user && !!token,
     isLoading,
     login,
-    sendCode,
     logout,
     validateSession,
   }

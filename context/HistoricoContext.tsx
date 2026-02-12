@@ -78,7 +78,7 @@ const initialRegistros: HistoricoRegistro[] = [
     horario: '11:15',
     status: 'concluido',
     titulo: 'Login no sistema',
-    descricao: 'Acesso realizado com sucesso via código de verificação.',
+    descricao: 'Acesso realizado com sucesso (login com e-mail e senha).',
     dataCriacao: '2025-01-20T11:15:00.000Z',
     dataAtualizacao: '2025-01-20T11:15:00.000Z',
   },

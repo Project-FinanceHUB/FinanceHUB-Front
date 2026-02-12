@@ -18,13 +18,7 @@ function generateSolicitacaoNumero(): string {
 }
 
 const defaultCompanies: Company[] = [
-  { id: 'c1', nome: 'Alvorada Soluções Tecnológicas Ltda', cnpjs: ['12.345.678/0001-90'], ativo: true },
-  { id: 'c2', nome: 'Horizonte Verde Consultoria Ambiental Ltda', cnpjs: ['23.456.789/0001-01'], ativo: true },
-  { id: 'c3', nome: 'Nova Era Comércio de Alimentos Ltda', cnpjs: ['34.567.890/0001-12'], ativo: true },
-  { id: 'c4', nome: 'Atlas Engenharia e Projetos Ltda', cnpjs: ['45.678.901/0001-23'], ativo: true },
-  { id: 'c5', nome: 'Vértice Logística Integrada Ltda', cnpjs: ['56.789.012/0001-34'], ativo: true },
-  { id: 'c6', nome: 'Aurora Serviços Administrativos Ltda', cnpjs: ['67.890.123/0001-45'], ativo: true },
-  { id: 'c7', nome: 'Pontal Distribuidora de Produtos Ltda', cnpjs: ['78.901.234/0001-56'], ativo: true },
+  
 ]
 
 function getInitialSolicitacoes(): Solicitacao[] {
