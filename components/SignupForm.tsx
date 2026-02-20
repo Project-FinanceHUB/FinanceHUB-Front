@@ -12,7 +12,6 @@ export default function SignupForm() {
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'admin' | 'gerente' | 'usuario'>('usuario')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState(false)
@@ -46,7 +45,6 @@ export default function SignupForm() {
         nome: nome.trim(),
         email: email.trim(),
         password,
-        role,
       })
 
       setSucesso(true)
@@ -140,27 +138,6 @@ export default function SignupForm() {
               required
               minLength={6}
             />
-          </div>
-
-          {/* Role */}
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-              Tipo de conta
-            </label>
-            <select
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as 'admin' | 'gerente' | 'usuario')}
-              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 transition-all duration-200 bg-white text-gray-900 border-gray-300 focus:border-[var(--primary)]"
-              disabled={isSubmitting}
-            >
-              <option value="usuario">Usuário</option>
-              <option value="gerente">Gerente</option>
-              <option value="admin">Administrador</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Novas contas são criadas como Usuário. Um administrador pode alterar o tipo depois.
-            </p>
           </div>
 
           {/* Erro */}

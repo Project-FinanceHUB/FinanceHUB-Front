@@ -27,7 +27,6 @@ export default function HeroSection() {
   const [nome, setNome] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
-  const [role, setRole] = useState<'admin' | 'gerente' | 'usuario'>('usuario')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [erroSignup, setErroSignup] = useState('')
   const [sucessoSignup, setSucessoSignup] = useState(false)
@@ -148,7 +147,6 @@ export default function HeroSection() {
         nome: nome.trim(),
         email: signupEmail.trim(),
         password: signupPassword,
-        role,
       })
       toast.success('Conta criada! Entrando...')
       setSucessoSignup(true)
@@ -159,7 +157,6 @@ export default function HeroSection() {
         setNome('')
         setSignupEmail('')
         setSignupPassword('')
-        setRole('usuario')
         router.push('/dashboard')
       } catch (loginErr) {
         toast.info('Conta criada. Faça login para entrar.')
@@ -168,7 +165,6 @@ export default function HeroSection() {
         setNome('')
         setSignupEmail('')
         setSignupPassword('')
-        setRole('usuario')
         router.push('/?login=true&cadastro=sucesso')
       }
     } catch (error) {
@@ -591,27 +587,6 @@ export default function HeroSection() {
                         disabled={isSubmitting}
                         required
                       />
-                    </div>
-
-                    {/* Role */}
-                    <div>
-                      <label htmlFor="signup-role" className="block text-sm font-medium text-gray-700 mb-2">
-                        Tipo de conta
-                      </label>
-                      <select
-                        id="signup-role"
-                        value={role}
-                        onChange={(e) => setRole(e.target.value as 'admin' | 'gerente' | 'usuario')}
-                        className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all bg-white text-gray-900 border-gray-300"
-                        disabled={isSubmitting}
-                      >
-                        <option value="usuario">Usuário</option>
-                        <option value="gerente">Gerente</option>
-                        <option value="admin">Administrador</option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Novas contas são criadas como Usuário. Um administrador pode alterar o tipo depois.
-                      </p>
                     </div>
 
                     {/* Erro */}
