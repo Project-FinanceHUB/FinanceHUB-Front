@@ -1,39 +1,76 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useConfiguracoes } from '@/context/ConfiguracoesContext'
 import { useToast } from '@/context/ToastContext'
+import * as userAPI from '@/lib/api/users'
 
 type PerfilModalProps = {
   isOpen: boolean
   onClose: () => void
 }
 
+/** Máscara simples para telefone (11) 99999-9999 ou (11) 9999-9999 */
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 2) return digits ? `(${digits}` : ''
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
 export default function PerfilModal({ isOpen, onClose }: PerfilModalProps) {
-  const { user } = useAuth()
+  const { user, token, validateSession } = useAuth()
   const { profile, setProfile } = useConfiguracoes()
   const toast = useToast()
-  
+
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
     telefone: '',
     cargo: '',
   })
+  const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-  // Sincronizar com dados do usuário autenticado ao abrir
-  useEffect(() => {
-    if (isOpen && user) {
+  const loadProfile = useCallback(async () => {
+    if (!token) return
+    setIsLoading(true)
+    try {
+      const data = await userAPI.getMe(token)
       setFormData({
-        nome: user.nome || profile.nome || '',
-        email: user.email || profile.email || '',
+        nome: data.nome || '',
+        email: data.email || '',
+        telefone: data.telefone || '',
+        cargo: data.cargo || '',
+      })
+      // Não atualiza profile aqui para evitar loop (effect depende de loadProfile)
+    } catch {
+      setFormData({
+        nome: user?.nome || profile.nome || '',
+        email: user?.email || profile.email || '',
+        telefone: profile.telefone || '',
+        cargo: profile.cargo || '',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [token, user?.nome, user?.email, profile.nome, profile.email, profile.telefone, profile.cargo])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (token) {
+      loadProfile()
+    } else {
+      setFormData({
+        nome: user?.nome || profile.nome || '',
+        email: user?.email || profile.email || '',
         telefone: profile.telefone || '',
         cargo: profile.cargo || '',
       })
     }
-  }, [isOpen, user, profile])
+    // Só recarrega ao abrir o modal ou quando o token muda; evita loop ao não depender de loadProfile
+  }, [isOpen, token])
 
   useEffect(() => {
     if (isOpen) {
@@ -46,12 +83,40 @@ export default function PerfilModal({ isOpen, onClose }: PerfilModalProps) {
     }
   }, [isOpen])
 
-  if (!isOpen) return null
+  const handleTelefoneChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, telefone: formatPhone(value) }))
+  }
 
   const handleSave = async () => {
-    setIsSaving(true)
-    try {
-      // Atualizar o perfil no contexto
+    if (!formData.nome.trim()) {
+      toast.error('Preencha o nome.')
+      return
+    }
+    if (token) {
+      setIsSaving(true)
+      try {
+        const updated = await userAPI.updateMe(token, {
+          nome: formData.nome.trim(),
+          telefone: formData.telefone.trim() || undefined,
+          cargo: formData.cargo.trim() || undefined,
+        })
+        setProfile({
+          ...profile,
+          nome: updated.nome,
+          email: updated.email,
+          telefone: updated.telefone || '',
+          cargo: updated.cargo || '',
+        })
+        await validateSession()
+        toast.success('Perfil atualizado com sucesso!')
+        onClose()
+      } catch (err: any) {
+        console.error('Erro ao salvar perfil:', err)
+        toast.error(err?.message || 'Erro ao salvar perfil. Tente novamente.')
+      } finally {
+        setIsSaving(false)
+      }
+    } else {
       setProfile({
         ...profile,
         nome: formData.nome,
@@ -59,106 +124,133 @@ export default function PerfilModal({ isOpen, onClose }: PerfilModalProps) {
         telefone: formData.telefone,
         cargo: formData.cargo,
       })
-      
-      // TODO: Aqui você pode adicionar uma chamada à API para salvar o perfil no backend
-      // await userAPI.updateProfile(user?.id, formData)
-      
       toast.success('Perfil atualizado com sucesso!')
       onClose()
-    } catch (error) {
-      console.error('Erro ao salvar perfil:', error)
-      toast.error('Erro ao salvar perfil. Tente novamente.')
-    } finally {
-      setIsSaving(false)
     }
   }
 
-  const inputBase = 'w-full rounded-xl border px-4 py-2.5 text-sm outline-none bg-white border-gray-200 focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]/40'
-  const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed'
+  if (!isOpen) return null
+
+  const inputBase =
+    'w-full rounded-xl border border-gray-200 bg-gray-50/80 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-[var(--primary)] focus:bg-white focus:ring-2 focus:ring-[var(--primary)]/20 disabled:cursor-not-allowed disabled:opacity-70'
+  const labelBase = 'block text-sm font-medium text-gray-700 mb-1.5'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Meu Perfil</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-            aria-label="Fechar"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-              <input
-                type="text"
-                value={formData.nome}
-                onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))}
-                className={inputBase}
-                placeholder="Seu nome"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                className={inputBase}
-                placeholder="seu@email.com"
-                disabled
-              />
-              <p className="mt-1 text-xs text-gray-500">O e-mail não pode ser alterado</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-              <input
-                type="tel"
-                value={formData.telefone}
-                onChange={(e) => setFormData((prev) => ({ ...prev, telefone: e.target.value }))}
-                className={inputBase}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-              <input
-                type="text"
-                value={formData.cargo}
-                onChange={(e) => setFormData((prev) => ({ ...prev, cargo: e.target.value }))}
-                className={inputBase}
-                placeholder="Ex: Cliente"
-              />
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="perfil-title">
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="relative w-full max-w-md flex flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 overflow-hidden transition-all duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header com gradiente sutil */}
+        <div className="bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] px-6 py-5">
+          <div className="flex items-center justify-between">
+            <h2 id="perfil-title" className="text-xl font-bold text-white tracking-tight">
+              Meu Perfil
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/90 transition hover:bg-white/20 hover:text-white"
+              aria-label="Fechar"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+        <div className="flex-1 overflow-y-auto p-6">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
+              <p className="text-sm text-gray-500">Carregando perfil...</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div>
+                <label className={labelBase} htmlFor="perfil-nome">Nome</label>
+                <input
+                  id="perfil-nome"
+                  type="text"
+                  value={formData.nome}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))}
+                  className={inputBase}
+                  placeholder="Seu nome"
+                  autoComplete="name"
+                />
+              </div>
+
+              <div>
+                <label className={labelBase} htmlFor="perfil-email">E-mail</label>
+                <input
+                  id="perfil-email"
+                  type="email"
+                  value={formData.email}
+                  className={inputBase}
+                  placeholder="seu@email.com"
+                  disabled
+                  readOnly
+                />
+                <p className="mt-1.5 text-xs text-gray-500">O e-mail não pode ser alterado.</p>
+              </div>
+
+              <div>
+                <label className={labelBase} htmlFor="perfil-telefone">Telefone</label>
+                <input
+                  id="perfil-telefone"
+                  type="tel"
+                  value={formData.telefone}
+                  onChange={(e) => handleTelefoneChange(e.target.value)}
+                  className={inputBase}
+                  placeholder="(11) 99999-9999"
+                  autoComplete="tel"
+                />
+              </div>
+
+              <div>
+                <label className={labelBase} htmlFor="perfil-cargo">Cargo</label>
+                <input
+                  id="perfil-cargo"
+                  type="text"
+                  value={formData.cargo}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, cargo: e.target.value }))}
+                  className={inputBase}
+                  placeholder="Ex: Cliente"
+                  autoComplete="organization-title"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3 bg-gray-50/50">
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition"
+            className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving}
-            className={btnPrimary}
+            disabled={isSaving || isLoading}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? 'Salvando...' : 'Salvar'}
+            {isSaving ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar'
+            )}
           </button>
         </div>
       </div>

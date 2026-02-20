@@ -155,7 +155,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const pathname = usePathname()
   const { companies, setCompanies, addSolicitacao, companiesModalOpen, setCompaniesModalOpen, loading: contextLoading } = useDashboard()
   const { mensagens } = useSuporte()
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const toast = useToast()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -342,12 +342,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     )}
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center font-semibold text-sm shadow-lg ring-2 ring-white">
-                      {user?.nome?.charAt(0).toUpperCase() || 'U'}
+                      {authLoading ? '…' : (user?.nome?.charAt(0).toUpperCase() || 'U')}
                     </div>
                     <div className="hidden sm:block text-left leading-tight">
-                      <div className="text-sm font-semibold text-gray-900">{user?.nome || 'Usuário'}</div>
+                      <div className="text-sm font-semibold text-gray-900">{authLoading ? '…' : (user?.nome || 'Usuário')}</div>
                       <div className="text-xs text-gray-500 font-medium">
-                        {user?.role === 'admin' ? 'Administrador' : user?.role === 'gerente' ? 'Gerente' : user?.role === 'usuario' ? 'Usuário' : 'Cliente'}
+                        {authLoading ? '…' : (user?.role === 'admin' ? 'Administrador' : user?.role === 'gerente' ? 'Gerente' : user?.role === 'usuario' ? 'Usuário' : 'Cliente')}
                       </div>
                     </div>
                     <svg

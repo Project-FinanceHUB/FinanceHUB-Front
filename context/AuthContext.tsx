@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (validation.valid && validation.session) {
             setToken(savedToken)
             setUser(validation.session.user)
-            document.cookie = `auth_token=${savedToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
+            persistSession(savedToken, validation.session.user)
           } else {
             clearSession()
           }
@@ -138,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const validation = await authAPI.validateSession(token)
       if (validation.valid && validation.session) {
         setUser(validation.session.user)
+        persistSession(token, validation.session.user)
         return true
       }
     } catch {

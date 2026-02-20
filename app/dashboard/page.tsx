@@ -9,6 +9,7 @@ import DeleteConfirmModal from '@/components/DeleteConfirmModal'
 import BoletoPaymentsChart from '@/components/BoletoPaymentsChart'
 import { useDashboard } from '@/context/DashboardContext'
 import { useToast } from '@/context/ToastContext'
+import { useSuporte } from '@/context/SuporteContext'
 import { Skeleton, SkeletonCard, SkeletonTable } from '@/components/Skeleton'
 import Spinner from '@/components/Spinner'
 import type { Solicitacao, SolicitacaoFormData, SolicitacaoStatus } from '@/types/solicitacao'
@@ -179,6 +180,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams()
   const { companies, setCompanies, solicitacoes, setSolicitacoes, addSolicitacao, refetchSolicitacoes, setCompaniesModalOpen, loading } = useDashboard()
   const toast = useToast()
+  const { mensagens } = useSuporte()
   const [mounted, setMounted] = useState(false)
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'em_revisao' | 'fechado'>('todos')
   const [query, setQuery] = useState('')
@@ -353,15 +355,40 @@ export default function DashboardPage() {
   )
 
   const totals = useMemo(() => {
-    const boletosEmAberto = 3
-    const solicitacoesPendentes = solicitacoes.filter((t) => 
-      t.status === 'pendente' || 
-      t.status === 'aguardando_validacao' || 
-      t.status === 'em_andamento'
+    const comBoleto = solicitacoes.filter(
+      (s) => s.boletoPath || (s.boleto && typeof s.boleto === 'string')
+    )
+    const boletosComBoleto = comBoleto.length
+    const boletosEmAberto = comBoleto.filter(
+      (s) =>
+        s.status !== 'concluido' &&
+        s.status !== 'fechado' &&
+        s.status !== 'aprovado' &&
+        s.status !== 'cancelado' &&
+        s.status !== 'rejeitado'
     ).length
-    const mensagensNaoLidas = 2
-    return { boletosEmAberto, solicitacoesPendentes, mensagensNaoLidas }
-  }, [solicitacoes])
+
+    const solicitacoesPendentes = solicitacoes.filter(
+      (t) =>
+        t.status === 'pendente' ||
+        t.status === 'aguardando_validacao' ||
+        t.status === 'em_andamento'
+    ).length
+
+    const mensagensNaoLidas = mensagens.filter(
+      (m) => !m.lida && m.direcao === 'recebida'
+    ).length
+
+    const totalSolicitacoes = solicitacoes.length
+
+    return {
+      boletosEmAberto,
+      boletosComBoleto,
+      solicitacoesPendentes,
+      mensagensNaoLidas,
+      totalSolicitacoes,
+    }
+  }, [solicitacoes, mensagens])
 
   if (!mounted || loading) {
     return (
@@ -429,12 +456,19 @@ export default function DashboardPage() {
                   <div>
                     <div className="text-sm font-medium text-gray-600 mb-1">Boletos em aberto</div>
                     <div className="text-4xl font-bold text-gray-900 mt-2">{totals.boletosEmAberto}</div>
+                    {totals.boletosComBoleto > 0 && (
+                      <p className="mt-1 text-xs text-emerald-700 font-semibold">
+                        de {totals.boletosComBoleto} com boleto registrado
+                      </p>
+                    )}
                   </div>
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                     <Icon name="bill" className="w-7 h-7" />
                   </div>
                 </div>
-                <div className="mt-4 text-sm text-gray-600">Acompanhe status e baixe PDFs rapidamente.</div>
+                <div className="mt-4 text-sm text-gray-600">
+                  Considera solicitações com boleto anexado que ainda não foram concluídas.
+                </div>
               </div>
               <div className="group relative rounded-2xl bg-white border border-gray-200/80 p-5 md:p-6 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:border-[var(--primary)]/20 transition-all duration-300 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -442,12 +476,19 @@ export default function DashboardPage() {
                   <div>
                     <div className="text-sm font-medium text-gray-600 mb-1">Solicitações pendentes</div>
                     <div className="text-4xl font-bold text-gray-900 mt-2">{totals.solicitacoesPendentes}</div>
+                    {totals.totalSolicitacoes > 0 && (
+                      <p className="mt-1 text-xs text-amber-700 font-semibold">
+                        de {totals.totalSolicitacoes} solicitações no período
+                      </p>
+                    )}
                   </div>
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 text-amber-800 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                     <Icon name="solicitacao" className="w-7 h-7" />
                   </div>
                 </div>
-                <div className="mt-4 text-sm text-gray-600">Priorize o que precisa de validação.</div>
+                <div className="mt-4 text-sm text-gray-600">
+                  Inclui solicitações em andamento, pendentes ou aguardando validação.
+                </div>
               </div>
               <div className="group relative rounded-2xl bg-white border border-gray-200/80 p-5 md:p-6 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:border-[var(--primary)]/20 transition-all duration-300 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-sky-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -460,7 +501,9 @@ export default function DashboardPage() {
                     <Icon name="inbox" className="w-7 h-7" />
                   </div>
                 </div>
-                <div className="mt-4 text-sm text-gray-600">Respostas do suporte e avisos do sistema.</div>
+                <div className="mt-4 text-sm text-gray-600">
+                  Mensagens recebidas do suporte que ainda não foram lidas no painel.
+                </div>
               </div>
             </div>
 
