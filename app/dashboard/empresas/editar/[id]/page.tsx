@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 import { useDashboard } from '@/context/DashboardContext'
 import type { CompanyFormData } from '@/types/company'
+import * as companyAPI from '@/lib/api/companies'
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ')
@@ -14,12 +16,14 @@ export default function EditarEmpresaPage() {
   const params = useParams()
   const id = params?.id as string
 
+  const { token } = useAuth()
   const { companies, setCompanies } = useDashboard()
 
   const [nome, setNome] = useState('')
   const [cnpjs, setCnpjs] = useState<string[]>([''])
   const [errors, setErrors] = useState<{ nome?: string; cnpjs?: string }>()
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (id && companies.length > 0) {
@@ -55,15 +59,24 @@ export default function EditarEmpresaPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSave = () => {
-    if (!validate()) return
+  const handleSave = async () => {
+    if (!validate() || !id || !token) return
     const data: CompanyFormData = {
       nome: nome.trim(),
       cnpjs: cnpjs.map((c) => c.trim()).filter(Boolean),
       ativo: true,
     }
-    setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)))
-    router.push('/dashboard/empresas')
+    setSaving(true)
+    try {
+      const updated = await companyAPI.updateCompany(id, data, token)
+      setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)))
+      router.push('/dashboard/empresas')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao salvar.'
+      setErrors({ nome: message })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleCancel = () => {
@@ -219,11 +232,11 @@ export default function EditarEmpresaPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200 mt-2">
-                <button type="button" onClick={handleSave} className={btnPrimary}>
+                <button type="button" onClick={handleSave} disabled={saving} className={btnPrimary}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  Salvar alterações
+                  {saving ? 'Salvando...' : 'Salvar alterações'}
                 </button>
                 <button type="button" onClick={handleCancel} className={btnSecondary}>
                   Cancelar

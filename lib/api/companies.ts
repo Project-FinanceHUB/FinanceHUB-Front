@@ -3,8 +3,17 @@ import type { Company, CompanyFormData } from '@/types/company'
 
 const API_URL = apiConfig.baseURL
 
-export async function getCompanies(): Promise<Company[]> {
-  const response = await fetch(`${API_URL}/api/companies`)
+function authHeaders(token: string) {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  }
+}
+
+export async function getCompanies(token: string): Promise<Company[]> {
+  const response = await fetch(`${API_URL}/api/companies`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
   if (!response.ok) {
     throw new Error('Erro ao buscar empresas')
   }
@@ -12,12 +21,10 @@ export async function getCompanies(): Promise<Company[]> {
   return result.data || result
 }
 
-export async function createCompany(data: CompanyFormData): Promise<Company> {
+export async function createCompany(data: CompanyFormData, token: string): Promise<Company> {
   const response = await fetch(`${API_URL}/api/companies`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: authHeaders(token),
     body: JSON.stringify(data),
   })
   if (!response.ok) {
@@ -28,12 +35,10 @@ export async function createCompany(data: CompanyFormData): Promise<Company> {
   return result.data || result
 }
 
-export async function updateCompany(id: string, data: Partial<CompanyFormData>): Promise<Company> {
+export async function updateCompany(id: string, data: Partial<CompanyFormData>, token: string): Promise<Company> {
   const response = await fetch(`${API_URL}/api/companies/${id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: authHeaders(token),
     body: JSON.stringify(data),
   })
   if (!response.ok) {
@@ -44,9 +49,10 @@ export async function updateCompany(id: string, data: Partial<CompanyFormData>):
   return result.data || result
 }
 
-export async function deleteCompany(id: string): Promise<void> {
+export async function deleteCompany(id: string, token: string): Promise<void> {
   const response = await fetch(`${API_URL}/api/companies/${id}`, {
     method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
   })
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Erro ao deletar empresa' }))

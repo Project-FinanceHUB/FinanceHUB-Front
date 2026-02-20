@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 import { useDashboard } from '@/context/DashboardContext'
 import type { CompanyFormData } from '@/types/company'
 import * as companyAPI from '@/lib/api/companies'
@@ -12,6 +13,7 @@ function cn(...parts: Array<string | false | null | undefined>) {
 
 export default function EmpresasPage() {
   const router = useRouter()
+  const { token } = useAuth()
   const { companies, setCompanies } = useDashboard()
   const [mounted, setMounted] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -88,7 +90,8 @@ export default function EmpresasPage() {
     setSubmitLoading(true)
     setSubmitError(null)
     try {
-      const created = await companyAPI.createCompany(data)
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+      const created = await companyAPI.createCompany(data, token)
       setCompanies((prev) => [...prev, created])
       handleCloseModal()
     } catch (err: unknown) {
@@ -104,7 +107,8 @@ export default function EmpresasPage() {
       return
     }
     try {
-      await companyAPI.deleteCompany(id)
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+      await companyAPI.deleteCompany(id, token)
       setCompanies((prev) => prev.filter((c) => c.id !== id))
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao remover empresa.'
