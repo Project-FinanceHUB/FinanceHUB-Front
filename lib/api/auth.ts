@@ -167,9 +167,13 @@ export async function validateSession(token: string): Promise<ValidateSessionRes
     clearTimeout(timeoutId)
     // Falha de rede (backend fora, CORS, etc.): não lançar, retornar sessão inválida
     if (err?.name === 'AbortError' || err?.name === 'TypeError') {
+      const isProductionUrl = /^https:\/\//i.test(API_URL)
+      const hint = isProductionUrl
+        ? ' Verifique se o back está no ar e se FRONTEND_URL está configurado no projeto do back na Vercel.'
+        : ` Defina NEXT_PUBLIC_API_URL na Vercel e faça Redeploy.`
       return {
         valid: false,
-        error: `Backend indisponível. URL configurada: ${API_URL}. Defina NEXT_PUBLIC_API_URL na Vercel e faça Redeploy.`,
+        error: `Backend indisponível (${API_URL}).${hint}`,
       }
     }
     return { valid: false, error: err?.message || 'Erro ao validar sessão' }
