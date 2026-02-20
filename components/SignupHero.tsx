@@ -4,10 +4,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import EmailInput from './EmailInput'
+import { useAuth } from '@/context/AuthContext'
 import * as authAPI from '@/lib/api/auth'
 
 export default function SignupHero() {
   const router = useRouter()
+  const { login } = useAuth()
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -54,12 +56,17 @@ export default function SignupHero() {
         role,
       })
       setSucesso(true)
-      setTimeout(() => {
+      try {
+        await login(email.trim(), password)
+        router.push('/dashboard')
+      } catch (loginErr) {
+        setSucesso(false)
         router.push('/?login=true&cadastro=sucesso')
-      }, 2000)
+      }
     } catch (error) {
       console.error('Erro ao cadastrar:', error)
       setErro(error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.')
+    } finally {
       setIsSubmitting(false)
     }
   }

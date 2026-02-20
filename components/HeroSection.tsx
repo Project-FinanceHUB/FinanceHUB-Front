@@ -150,9 +150,19 @@ export default function HeroSection() {
         password: signupPassword,
         role,
       })
-      toast.success('Conta criada com sucesso! Redirecionando...')
+      toast.success('Conta criada! Entrando...')
       setSucessoSignup(true)
-      setTimeout(() => {
+      try {
+        await login(signupEmail.trim(), signupPassword)
+        setShowSignup(false)
+        setSucessoSignup(false)
+        setNome('')
+        setSignupEmail('')
+        setSignupPassword('')
+        setRole('usuario')
+        router.push('/dashboard')
+      } catch (loginErr) {
+        toast.info('Conta criada. Faça login para entrar.')
         setShowSignup(false)
         setSucessoSignup(false)
         setNome('')
@@ -160,12 +170,13 @@ export default function HeroSection() {
         setSignupPassword('')
         setRole('usuario')
         router.push('/?login=true&cadastro=sucesso')
-      }, 2000)
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.'
       setErroSignup(errorMessage)
-      setIsSubmitting(false)
       toast.error(errorMessage)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 

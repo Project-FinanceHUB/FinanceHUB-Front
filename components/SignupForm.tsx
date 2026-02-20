@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import EmailInput from './EmailInput'
+import { useAuth } from '@/context/AuthContext'
 import * as authAPI from '@/lib/api/auth'
 
 export default function SignupForm() {
   const router = useRouter()
+  const { login } = useAuth()
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -48,13 +50,17 @@ export default function SignupForm() {
       })
 
       setSucesso(true)
-      setTimeout(() => {
+      try {
+        await login(email.trim(), password)
+        router.push('/dashboard')
+      } catch (loginErr) {
         router.push('/?login=true&cadastro=sucesso')
-      }, 2000)
+      }
     } catch (error) {
       console.error('Erro ao cadastrar:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.'
       setErro(errorMessage)
+    } finally {
       setIsSubmitting(false)
     }
   }
@@ -73,9 +79,8 @@ export default function SignupForm() {
               Conta criada com sucesso!
             </h2>
             <p className="text-sm text-gray-600 mb-4">
-              Faça login com seu e-mail e senha para usar a plataforma.
+              Entrando na plataforma...
             </p>
-            <p className="text-xs text-gray-500">Redirecionando para o login...</p>
           </div>
         </div>
       </div>
