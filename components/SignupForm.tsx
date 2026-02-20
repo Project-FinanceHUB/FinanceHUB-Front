@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import EmailInput from './EmailInput'
-import * as userAPI from '@/lib/api/users'
+import * as authAPI from '@/lib/api/auth'
 
 export default function SignupForm() {
   const router = useRouter()
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [role, setRole] = useState<'admin' | 'gerente' | 'usuario'>('usuario')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [erro, setErro] = useState('')
@@ -23,30 +24,32 @@ export default function SignupForm() {
     setErro('')
     setSucesso(false)
 
-    // Validações
     if (!nome.trim()) {
       setErro('Nome é obrigatório')
       return
     }
-
     if (!isValidEmail(email)) {
       setErro('Digite um e-mail válido')
+      return
+    }
+    if (!password || password.length < 6) {
+      setErro('A senha deve ter no mínimo 6 caracteres')
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      await userAPI.createUser({
+      await authAPI.register({
         nome: nome.trim(),
         email: email.trim(),
+        password,
         role,
-        ativo: true,
       })
 
       setSucesso(true)
       setTimeout(() => {
-        router.push('/?cadastro=sucesso')
+        router.push('/?login=true&cadastro=sucesso')
       }, 2000)
     } catch (error) {
       console.error('Erro ao cadastrar:', error)
@@ -70,8 +73,9 @@ export default function SignupForm() {
               Conta criada com sucesso!
             </h2>
             <p className="text-sm text-gray-600 mb-4">
-              Redirecionando para o login...
+              Faça login com seu e-mail e senha para usar a plataforma.
             </p>
+            <p className="text-xs text-gray-500">Redirecionando para o login...</p>
           </div>
         </div>
       </div>
@@ -115,6 +119,24 @@ export default function SignupForm() {
             />
           </div>
 
+          {/* Senha */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Senha
+            </label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 transition-all duration-200 bg-white text-gray-900 placeholder-gray-400 border-gray-300 focus:border-[var(--primary)]"
+              disabled={isSubmitting}
+              required
+              minLength={6}
+            />
+          </div>
+
           {/* Role */}
           <div>
             <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
@@ -132,7 +154,7 @@ export default function SignupForm() {
               <option value="admin">Administrador</option>
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              Escolha o tipo de conta conforme suas permissões
+              Novas contas são criadas como Usuário. Um administrador pode alterar o tipo depois.
             </p>
           </div>
 
@@ -146,7 +168,7 @@ export default function SignupForm() {
           {/* Botão Submit */}
           <button
             type="submit"
-            disabled={isSubmitting || !nome.trim() || !isValidEmail(email)}
+            disabled={isSubmitting || !nome.trim() || !isValidEmail(email) || !password || password.length < 6}
             className="w-full py-3 px-4 bg-[var(--primary)] text-white font-semibold rounded-lg shadow-lg hover:bg-[var(--accent)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--primary)] transform hover:scale-[1.02] active:scale-[0.98]"
           >
             {isSubmitting ? 'Criando conta...' : 'Criar conta'}

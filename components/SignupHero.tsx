@@ -55,7 +55,7 @@ export default function SignupHero() {
       })
       setSucesso(true)
       setTimeout(() => {
-        router.push('/?cadastro=sucesso')
+        router.push('/?login=true&cadastro=sucesso')
       }, 2000)
     } catch (error) {
       console.error('Erro ao cadastrar:', error)
@@ -294,7 +294,7 @@ export default function SignupHero() {
                           <option value="admin">Administrador</option>
                         </select>
                         <p className="text-xs text-gray-500 mt-1">
-                          Escolha o tipo de conta conforme suas permissões
+                          Novas contas são criadas como Usuário. Um administrador pode alterar o tipo depois.
                         </p>
                       </div>
 

@@ -159,7 +159,7 @@ export default function HeroSection() {
         setSignupEmail('')
         setSignupPassword('')
         setRole('usuario')
-        router.push('/?cadastro=sucesso')
+        router.push('/?login=true&cadastro=sucesso')
       }, 2000)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.'
@@ -599,7 +599,7 @@ export default function HeroSection() {
                         <option value="admin">Administrador</option>
                       </select>
                       <p className="text-xs text-gray-500 mt-1">
-                        Escolha o tipo de conta conforme suas permissões
+                        Novas contas são criadas como Usuário. Um administrador pode alterar o tipo depois.
                       </p>
                     </div>
 
