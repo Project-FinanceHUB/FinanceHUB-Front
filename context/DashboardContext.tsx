@@ -36,9 +36,15 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [companiesModalOpen, setCompaniesModalOpen] = useState(false)
 
   const loadSolicitacoes = useCallback(async () => {
+    if (!token) {
+      setSolicitacoes([])
+      setSolicitacoesLoading(false)
+      return
+    }
+    setSolicitacoes([])
     try {
       setSolicitacoesLoading(true)
-      const { solicitacoes: list } = await solicitacoesAPI.getSolicitacoes({ page: 1, limit: 500 })
+      const { solicitacoes: list } = await solicitacoesAPI.getSolicitacoes(token, { page: 1, limit: 500 })
       setSolicitacoes(list)
     } catch (err: any) {
       console.error('Erro ao carregar solicitações da API:', err)
@@ -46,15 +52,17 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setSolicitacoesLoading(false)
     }
-  }, [])
+  }, [token])
 
   const loadCompanies = useCallback(async () => {
     if (!token) {
       setCompanies([])
       setCompaniesLoading(false)
+      if (typeof window !== 'undefined') localStorage.removeItem(COMPANIES_KEY)
       return
     }
     setError(null)
+    setCompanies([])
     try {
       setCompaniesLoading(true)
       const data = await companyAPI.getCompanies(token)
@@ -71,6 +79,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [token])
 
+  // Ao trocar de usuário ou fazer logout: limpar imediatamente para não exibir dados de outro usuário
+  useEffect(() => {
+    setCompanies([])
+    setSolicitacoes([])
+    if (typeof window !== 'undefined') localStorage.removeItem(COMPANIES_KEY)
+  }, [token])
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       loadCompanies()
@@ -79,7 +94,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [loadCompanies])
 
-  // Carregar solicitações apenas da API do backend (sem dados mock)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       loadSolicitacoes()
@@ -97,7 +111,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const addSolicitacao = useCallback(
     async (formData: SolicitacaoFormData) => {
-      const nova = await solicitacoesAPI.createSolicitacao(formData)
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+      const nova = await solicitacoesAPI.createSolicitacao(formData, token)
       // Garantir que o mês selecionado no formulário reflita no gráfico (mesmo se a API ainda não retornar mes)
       const comMes = {
         ...nova,
@@ -105,7 +120,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
       setSolicitacoes((prev) => [comMes, ...prev])
     },
-    []
+    [token]
   )
 
   const value: DashboardContextValue = {

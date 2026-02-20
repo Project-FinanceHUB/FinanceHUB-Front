@@ -7,6 +7,7 @@ import SolicitacaoModal from '@/components/SolicitacaoModal'
 import SolicitacaoDetalhesModal from '@/components/SolicitacaoDetalhesModal'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal'
 import BoletoPaymentsChart from '@/components/BoletoPaymentsChart'
+import { useAuth } from '@/context/AuthContext'
 import { useDashboard } from '@/context/DashboardContext'
 import { useToast } from '@/context/ToastContext'
 import { useSuporte } from '@/context/SuporteContext'
@@ -178,6 +179,7 @@ function Icon({ name, className }: { name: string; className?: string }) {
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
+  const { token } = useAuth()
   const { companies, setCompanies, solicitacoes, setSolicitacoes, addSolicitacao, refetchSolicitacoes, setCompaniesModalOpen, loading } = useDashboard()
   const toast = useToast()
   const { mensagens } = useSuporte()
@@ -227,10 +229,10 @@ export default function DashboardPage() {
   }
 
   const handleUpdateSolicitacao = async (formData: SolicitacaoFormData) => {
-    if (!selectedSolicitacao) return
+    if (!selectedSolicitacao || !token) return
     try {
       const { updateSolicitacao } = await import('@/lib/api/solicitacoes')
-      const updated = await updateSolicitacao(selectedSolicitacao.id, formData)
+      const updated = await updateSolicitacao(selectedSolicitacao.id, formData, token)
       // Garantir que o mês editado reflita no gráfico (mesmo se a API não retornar mes)
       const comMes = {
         ...updated,
@@ -251,10 +253,10 @@ export default function DashboardPage() {
   }
 
   const handleDeleteSolicitacao = async () => {
-    if (!solicitacaoToDelete) return
+    if (!solicitacaoToDelete || !token) return
     try {
       const { deleteSolicitacao } = await import('@/lib/api/solicitacoes')
-      await deleteSolicitacao(solicitacaoToDelete.id)
+      await deleteSolicitacao(solicitacaoToDelete.id, token)
       setSolicitacoes((prev) => prev.filter((sol) => sol.id !== solicitacaoToDelete.id))
       setSolicitacaoToDelete(undefined)
       toast.success('Solicitação excluída com sucesso!')

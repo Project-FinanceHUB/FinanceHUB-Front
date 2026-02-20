@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import { useAuth } from '@/context/AuthContext'
 import { useDashboard } from '@/context/DashboardContext'
 import SolicitacaoDetalhesModal from '@/components/SolicitacaoDetalhesModal'
 import Spinner from '@/components/Spinner'
@@ -102,6 +103,7 @@ function BadgeTipo({ tipo }: { tipo: HistoricoRow['tipo'] }) {
 }
 
 export default function HistoricoPage() {
+  const { token } = useAuth()
   const { solicitacoes, setSolicitacoes } = useDashboard()
 
   const [mounted, setMounted] = useState(false)
@@ -134,9 +136,10 @@ export default function HistoricoPage() {
 
   const handleDelete = async (id: string) => {
     if (typeof window !== 'undefined' && !window.confirm('Excluir esta solicitação do histórico?')) return
+    if (!token) return
     setDeletingId(id)
     try {
-      await solicitacoesAPI.deleteSolicitacao(id)
+      await solicitacoesAPI.deleteSolicitacao(id, token)
       setSolicitacoes((prev) => prev.filter((s) => s.id !== id))
       if (solicitacaoDetalhes?.id === id) setSolicitacaoDetalhes(null)
     } catch (e) {

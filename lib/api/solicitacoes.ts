@@ -36,12 +36,15 @@ function normalizeSolicitacao(raw: Record<string, unknown>): Solicitacao {
   }
 }
 
-export async function getSolicitacoes(params?: {
-  page?: number
-  limit?: number
-  status?: string
-  search?: string
-}): Promise<SolicitacoesListResponse> {
+export async function getSolicitacoes(
+  token: string,
+  params?: {
+    page?: number
+    limit?: number
+    status?: string
+    search?: string
+  }
+): Promise<SolicitacoesListResponse> {
   const searchParams = new URLSearchParams()
   if (params?.page != null) searchParams.set('page', String(params.page))
   if (params?.limit != null) searchParams.set('limit', String(params.limit))
@@ -49,7 +52,9 @@ export async function getSolicitacoes(params?: {
   if (params?.search) searchParams.set('search', params.search)
 
   const url = `${API_URL}/api/solicitacoes${searchParams.toString() ? `?${searchParams}` : ''}`
-  const response = await fetch(url)
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     const msg =
@@ -79,7 +84,7 @@ export async function getSolicitacoes(params?: {
   }
 }
 
-export async function createSolicitacao(formData: SolicitacaoFormData): Promise<Solicitacao> {
+export async function createSolicitacao(formData: SolicitacaoFormData, token: string): Promise<Solicitacao> {
   const body = new FormData()
   body.append('titulo', formData.titulo)
   body.append('origem', formData.origem)
@@ -101,6 +106,7 @@ export async function createSolicitacao(formData: SolicitacaoFormData): Promise<
 
   const response = await fetch(`${API_URL}/api/solicitacoes`, {
     method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
     body,
   })
 
@@ -123,7 +129,8 @@ export async function createSolicitacao(formData: SolicitacaoFormData): Promise<
 
 export async function updateSolicitacao(
   id: string,
-  formData: Partial<SolicitacaoFormData>
+  formData: Partial<SolicitacaoFormData>,
+  token: string
 ): Promise<Solicitacao> {
   const body = new FormData()
   if (formData.titulo != null) body.append('titulo', formData.titulo)
@@ -141,6 +148,7 @@ export async function updateSolicitacao(
 
   const response = await fetch(`${API_URL}/api/solicitacoes/${id}`, {
     method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
     body,
   })
 
@@ -161,8 +169,11 @@ export async function updateSolicitacao(
   return normalizeSolicitacao(data)
 }
 
-export async function deleteSolicitacao(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/api/solicitacoes/${id}`, { method: 'DELETE' })
+export async function deleteSolicitacao(id: string, token: string): Promise<void> {
+  const response = await fetch(`${API_URL}/api/solicitacoes/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     const msg =
