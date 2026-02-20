@@ -13,7 +13,6 @@ function cn(...parts: Array<string | false | null | undefined>) {
 const TABS = [
   { id: 'enviar', label: 'Enviar mensagem' },
   { id: 'inbox', label: 'Caixa de entrada' },
-  { id: 'historico', label: 'Histórico' },
   { id: 'solicitacoes', label: 'Solicitações' },
 ]
 
@@ -96,6 +95,10 @@ export default function SuporteModal() {
       document.body.style.overflow = ''
     }
   }, [suporteModalOpen])
+
+  useEffect(() => {
+    if (suporteModalTab === 'historico') setSuporteModalTab('enviar')
+  }, [suporteModalTab, setSuporteModalTab])
 
   useEffect(() => {
     if (!suporteModalOpen) {
@@ -273,49 +276,6 @@ export default function SuporteModal() {
                         </div>
                       </div>
                     ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {suporteModalTab === 'historico' && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-800">Histórico de atendimento</h3>
-              {mensagensOrdenadas.length === 0 ? (
-                <p className="text-sm text-gray-500 py-8 text-center">Nenhuma mensagem no histórico.</p>
-              ) : (
-                <div className="space-y-3">
-                  {mensagensOrdenadas.map((m) => (
-                    <div
-                      key={m.id}
-                      className={cn(
-                        'rounded-xl border p-4',
-                        m.direcao === 'enviada' ? 'border-l-4 border-l-[var(--primary)] bg-gray-50/50' : 'border-l-4 border-l-gray-300 bg-white',
-                        selectedMensagem?.id === m.id && 'ring-2 ring-[var(--primary)]/30'
-                      )}
-                      onClick={() => setSelectedMensagem(selectedMensagem?.id === m.id ? null : m)}
-                    >
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <span className={cn(
-                            'text-xs font-medium px-2 py-0.5 rounded',
-                            m.direcao === 'enviada' ? 'bg-[var(--primary)]/20 text-[var(--primary)]' : 'bg-gray-200 text-gray-700'
-                          )}>
-                            {m.direcao === 'enviada' ? 'Enviada' : 'Recebida'}
-                          </span>
-                          <span className="text-xs text-gray-500 ml-2">{m.remetente}</span>
-                        </div>
-                        <span className="text-xs text-gray-500">{formatarDataHora(m.dataHora)}</span>
-                      </div>
-                      <div className="font-medium text-gray-900 mt-2">{m.assunto}</div>
-                      <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{m.conteudo}</p>
-                      {m.solicitacaoId && (
-                        <div className="mt-2 text-xs text-gray-500">
-                          Solicitação #{solicitacoes.find((t) => t.id === m.solicitacaoId)?.numero ?? m.solicitacaoId}
-                        </div>
-                      )}
-                    </div>
-                  ))}
                 </div>
               )}
             </div>
