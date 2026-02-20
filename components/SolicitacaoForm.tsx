@@ -226,31 +226,45 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
         />
       </div>
 
-      <div>
-        <label htmlFor="mes" className="block text-sm font-bold text-gray-900 mb-2">
-          Mês do contrato <span className="text-red-500">*</span>
+      <div className={errors.mes ? 'rounded-xl ring-2 ring-red-200 ring-offset-2 ring-offset-white p-1 -m-1' : ''}>
+        <label id="mes-label" className="block text-sm font-bold text-gray-900 mb-1">
+          Em qual mês do contrato este boleto se refere? <span className="text-red-500">*</span>
         </label>
-        <select
-          id="mes"
-          value={formData.mes ?? 12}
-          onChange={(e) => handleChange('mes', Number(e.target.value))}
-          className={`w-full rounded-xl border-2 px-4 py-3 text-sm outline-none transition-all duration-200 ${
-            errors.mes
-              ? 'border-red-300 bg-red-50/50 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-              : 'border-gray-200 bg-white hover:border-gray-300 focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]'
-          }`}
-        >
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-            <option key={n} value={n}>
-              Mês {n}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          {isEditing
-            ? 'Altere o mês para atualizar a posição desta solicitação no gráfico de progresso do contrato.'
-            : 'Refere-se ao mês exibido no gráfico de progresso do contrato (12 meses).'}
+        <p className="text-xs text-gray-500 mb-3">
+          Seu contrato tem 12 meses. Escolha de <strong>1</strong> (início) a <strong>12</strong> (último mês). Esse valor aparece no gráfico de progresso do contrato.
         </p>
+        <div
+          role="group"
+          aria-labelledby="mes-label"
+          className="grid grid-cols-4 sm:grid-cols-6 gap-2"
+        >
+          {Array.from({ length: 12 }, (_, i) => {
+            const n = i + 1
+            const selected = (formData.mes ?? 12) === n
+            const isFirst = n === 1
+            const isLast = n === 12
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => handleChange('mes', n)}
+                className={`
+                  relative flex flex-col items-center justify-center rounded-xl border-2 py-3 px-2 text-sm font-semibold transition-all duration-200
+                  min-h-[52px] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)]
+                  ${selected
+                    ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)] shadow-sm'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-[var(--primary)]/40 hover:bg-gray-50'
+                  }
+                  ${errors.mes ? 'border-red-200' : ''}
+                `}
+              >
+                <span className="text-base">{n}</span>
+                {isFirst && <span className="text-[10px] font-normal text-gray-500 mt-0.5">Início</span>}
+                {isLast && <span className="text-[10px] font-normal text-gray-500 mt-0.5">Atual</span>}
+              </button>
+            )
+          })}
+        </div>
         {errors.mes && (
           <p className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
