@@ -239,27 +239,29 @@ export default function BoletoPaymentsChart({ solicitacoes = [] }: BoletoPayment
               Evolução por status: pago, pendente e vencido
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-gray-500">Exibir:</span>
-            {FILTER_OPTIONS.map(({ key, label, color }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => toggleFilter(key)}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  filter[key]
-                    ? 'border-current text-white shadow-sm'
-                    : 'border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100'
-                }`}
-                style={filter[key] ? { backgroundColor: color, borderColor: color } : undefined}
-              >
-                <span
-                  className="w-2 h-2 rounded-full bg-current opacity-90"
-                  aria-hidden
-                />
-                {label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2 w-full max-md:flex-col max-md:items-stretch max-md:gap-3">
+            <span className="text-xs font-medium text-gray-500 max-md:w-full">Exibir:</span>
+            <div className="flex flex-wrap items-center gap-2 max-md:grid max-md:grid-cols-3 max-md:gap-2 max-md:w-full">
+              {FILTER_OPTIONS.map(({ key, label, color }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleFilter(key)}
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors max-md:py-2 max-md:min-h-[44px] ${
+                    filter[key]
+                      ? 'border-current text-white shadow-sm'
+                      : 'border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100'
+                  }`}
+                  style={filter[key] ? { backgroundColor: color, borderColor: color } : undefined}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full bg-current opacity-90 shrink-0"
+                    aria-hidden
+                  />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -517,9 +517,9 @@ export default function DashboardPage() {
             {/* Tabela de solicitações */}
             <div className="rounded-2xl bg-white border border-gray-200/80 shadow-xl shadow-gray-200/50 overflow-hidden">
               <div className="p-4 md:p-6 space-y-4 border-b border-gray-100 bg-gradient-to-r from-gray-50/80 to-white">
-                {/* Busca + tamanho da página */}
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="relative flex-1 w-full">
+                {/* Busca + tamanho da página — no mobile: busca em destaque no topo, depois Exibir + dropdown (estilo Histórico) */}
+                <div className="flex flex-col sm:flex-row items-center gap-4 max-md:gap-3">
+                  <div className="relative flex-1 w-full max-md:order-1">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                       <Icon name="search" className="w-5 h-5" />
                     </span>
@@ -530,13 +530,12 @@ export default function DashboardPage() {
                       className="w-full rounded-xl border-2 border-gray-200 bg-white text-gray-900 pl-12 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all shadow-sm hover:shadow-md"
                     />
                   </div>
-
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full max-md:justify-between max-md:order-2">
                     <span className="text-sm text-gray-600 whitespace-nowrap font-medium">Exibir</span>
                     <select
                       value={pageSize}
                       onChange={(e) => setPageSize(Number(e.target.value) as 10 | 20 | 30 | 50)}
-                      className="rounded-xl border-2 border-gray-200 bg-white text-gray-900 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all shadow-sm hover:shadow-md"
+                      className="rounded-xl border-2 border-gray-200 bg-white text-gray-900 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all shadow-sm hover:shadow-md max-md:min-h-[44px] max-md:flex-1 max-md:max-w-[140px]"
                     >
                       <option value={10}>10 itens</option>
                       <option value={20}>20 itens</option>
@@ -546,13 +545,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Filtros de status */}
-                <div className="flex flex-wrap items-center gap-2.5">
+                {/* Filtros de status — no mobile: grid 2x2 como no Histórico */}
+                <div className="flex flex-wrap items-center gap-2.5 max-md:grid max-md:grid-cols-2 max-md:gap-2">
                   <button
                     type="button"
                     onClick={() => setStatusFiltro('todos')}
                     className={cn(
-                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]',
+                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98] max-md:min-h-[44px] max-md:py-3',
                       statusFiltro === 'todos'
                         ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
                         : 'bg-white border-gray-200 text-gray-700 hover:border-[var(--primary)]/30 hover:bg-gray-50'
@@ -564,7 +563,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setStatusFiltro('pendente')}
                     className={cn(
-                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]',
+                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98] max-md:min-h-[44px] max-md:py-3',
                       statusFiltro === 'pendente'
                         ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
                         : 'bg-white border-gray-200 text-gray-700 hover:border-[var(--primary)]/30 hover:bg-gray-50'
@@ -576,7 +575,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setStatusFiltro('em_revisao')}
                     className={cn(
-                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]',
+                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98] max-md:min-h-[44px] max-md:py-3',
                       statusFiltro === 'em_revisao'
                         ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
                         : 'bg-white border-gray-200 text-gray-700 hover:border-[var(--primary)]/30 hover:bg-gray-50'
@@ -588,7 +587,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setStatusFiltro('fechado')}
                     className={cn(
-                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]',
+                      'rounded-xl px-4 py-2.5 text-sm font-bold border-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98] max-md:min-h-[44px] max-md:py-3',
                       statusFiltro === 'fechado'
                         ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
                         : 'bg-white border-gray-200 text-gray-700 hover:border-[var(--primary)]/30 hover:bg-gray-50'
