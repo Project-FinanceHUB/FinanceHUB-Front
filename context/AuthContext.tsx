@@ -9,6 +9,10 @@ type User = {
   nome: string
   email: string
   role: string
+  /** Preenchido quando o usuário é funcionário de um gerente */
+  gerenteId?: string
+  /** ID do "dono" dos dados (gerente ou o próprio usuário); usado para empresas/solicitações */
+  effectiveOwnerId?: string
 }
 
 type AuthContextValue = {

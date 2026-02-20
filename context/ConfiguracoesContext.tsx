@@ -9,6 +9,7 @@ import type {
   Permission,
   PermissionFormData,
 } from '@/types/configuracoes'
+import { useAuth } from '@/context/AuthContext'
 import * as userAPI from '@/lib/api/users'
 
 const USERS_KEY = 'financehub_users'
@@ -61,6 +62,7 @@ type ConfiguracoesContextValue = {
 const ConfiguracoesContext = createContext<ConfiguracoesContextValue | null>(null)
 
 export function ConfiguracoesProvider({ children }: { children: ReactNode }) {
+  const { token } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -95,30 +97,28 @@ export function ConfiguracoesProvider({ children }: { children: ReactNode }) {
   const [configuracoesModalOpen, setConfiguracoesModalOpen] = useState(false)
   const [configuracoesModalTab, setConfiguracoesModalTab] = useState('usuarios')
 
-  // Carregar usuários da API
+  // Carregar usuários da API (apenas os funcionários vinculados ao gerente logado)
   useEffect(() => {
+    if (!token) {
+      setUsers([])
+      setLoading(false)
+      if (typeof window !== 'undefined') localStorage.removeItem(USERS_KEY)
+      return
+    }
     const loadUsers = async () => {
       setLoading(true)
       setError(null)
+      setUsers([])
       try {
-        const data = await userAPI.getUsers()
-        setUsers(data)
-        // Sincronizar com localStorage como backup
-        if (typeof window !== 'undefined') {
+        const data = await userAPI.getUsers(token)
+        setUsers(data || [])
+        if (typeof window !== 'undefined' && data?.length) {
           localStorage.setItem(USERS_KEY, JSON.stringify(data))
         }
       } catch (err: any) {
         console.error('Erro ao carregar usuários da API:', err)
-        // Fallback para localStorage se API falhar
-        if (typeof window !== 'undefined') {
-          try {
-            const saved = localStorage.getItem(USERS_KEY)
-            if (saved) {
-              setUsers(JSON.parse(saved))
-            }
-          } catch {}
-        }
-        setError('Erro ao carregar usuários. Usando dados locais.')
+        setUsers([])
+        setError(err?.message || 'Erro ao carregar usuários.')
       } finally {
         setLoading(false)
       }
@@ -127,7 +127,7 @@ export function ConfiguracoesProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       loadUsers()
     }
-  }, [])
+  }, [token])
 
   // Salvar profile no localStorage
   useEffect(() => {
@@ -151,71 +151,35 @@ export function ConfiguracoesProvider({ children }: { children: ReactNode }) {
   }, [permissions])
 
   const addUser = useCallback(async (data: UserFormData) => {
-    try {
-      const newUser = await userAPI.createUser(data)
-      setUsers((prev) => [...prev, newUser])
-      // Atualizar localStorage
-      if (typeof window !== 'undefined') {
-        const updated = [...users, newUser]
-        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
-      }
-    } catch (err: any) {
-      console.error('Erro ao criar usuário:', err)
-      // Fallback para localStorage
-      const newUser: User = {
-        ...data,
-        id: Date.now().toString(),
-      }
-      setUsers((prev) => [...prev, newUser])
-      if (typeof window !== 'undefined') {
-        const updated = [...users, newUser]
-        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
-      }
-      throw err
+    if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+    if (!data.password || data.password.length < 6) throw new Error('Senha é obrigatória (mínimo 6 caracteres).')
+    const newUser = await userAPI.createUser(data, token)
+    setUsers((prev) => [...prev, newUser])
+    if (typeof window !== 'undefined') {
+      const updated = [...users, newUser]
+      localStorage.setItem(USERS_KEY, JSON.stringify(updated))
     }
-  }, [users])
+  }, [token, users])
 
   const updateUser = useCallback(async (id: string, data: Partial<UserFormData>) => {
-    try {
-      const updatedUser = await userAPI.updateUser(id, data)
-      setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)))
-      // Atualizar localStorage
-      if (typeof window !== 'undefined') {
-        const updated = users.map((u) => (u.id === id ? updatedUser : u))
-        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
-      }
-    } catch (err: any) {
-      console.error('Erro ao atualizar usuário:', err)
-      // Fallback para localStorage
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)))
-      if (typeof window !== 'undefined') {
-        const updated = users.map((u) => (u.id === id ? { ...u, ...data } : u))
-        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
-      }
-      throw err
+    if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+    const updatedUser = await userAPI.updateUser(id, data, token)
+    setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)))
+    if (typeof window !== 'undefined') {
+      const updated = users.map((u) => (u.id === id ? updatedUser : u))
+      localStorage.setItem(USERS_KEY, JSON.stringify(updated))
     }
-  }, [users])
+  }, [token, users])
 
   const deleteUser = useCallback(async (id: string) => {
-    try {
-      await userAPI.deleteUser(id)
-      setUsers((prev) => prev.filter((u) => u.id !== id))
-      // Atualizar localStorage
-      if (typeof window !== 'undefined') {
-        const updated = users.filter((u) => u.id !== id)
-        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
-      }
-    } catch (err: any) {
-      console.error('Erro ao deletar usuário:', err)
-      // Fallback para localStorage
-      setUsers((prev) => prev.filter((u) => u.id !== id))
-      if (typeof window !== 'undefined') {
-        const updated = users.filter((u) => u.id !== id)
-        localStorage.setItem(USERS_KEY, JSON.stringify(updated))
-      }
-      throw err
+    if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+    await userAPI.deleteUser(id, token)
+    setUsers((prev) => prev.filter((u) => u.id !== id))
+    if (typeof window !== 'undefined') {
+      const updated = users.filter((u) => u.id !== id)
+      localStorage.setItem(USERS_KEY, JSON.stringify(updated))
     }
-  }, [users])
+  }, [token, users])
 
   const addPermission = (data: PermissionFormData) => {
     const newPerm: Permission = {

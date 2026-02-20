@@ -20,6 +20,7 @@ export default function UserModal({ user, onClose, onSave, onDelete }: UserModal
   const [formData, setFormData] = useState<UserFormData>({
     nome: '',
     email: '',
+    password: '',
     role: 'usuario',
     ativo: true,
   })
@@ -37,6 +38,7 @@ export default function UserModal({ user, onClose, onSave, onDelete }: UserModal
       setFormData({
         nome: '',
         email: '',
+        password: '',
         role: 'usuario',
         ativo: true,
       })
@@ -61,6 +63,9 @@ export default function UserModal({ user, onClose, onSave, onDelete }: UserModal
       newErrors.email = 'E-mail é obrigatório'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'E-mail inválido'
+    }
+    if (!user && (!formData.password || formData.password.length < 6)) {
+      newErrors.password = 'Senha é obrigatória (mínimo 6 caracteres)'
     }
 
     setErrors(newErrors)
@@ -136,6 +141,25 @@ export default function UserModal({ user, onClose, onSave, onDelete }: UserModal
             />
             {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
           </div>
+
+          {!user && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Senha <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={formData.password ?? ''}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, password: e.target.value }))
+                  if (errors.password) setErrors((prev) => ({ ...prev, password: '' }))
+                }}
+                className={`${inputBase} ${errors.password ? inputError : ''}`}
+                placeholder="Mínimo 6 caracteres (para login do funcionário)"
+              />
+              {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Perfil</label>

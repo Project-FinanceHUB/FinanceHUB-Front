@@ -9,7 +9,7 @@ export type User = {
   ultimoLogin?: string
 }
 
-export type UserFormData = Omit<User, 'id' | 'ultimoLogin'>
+export type UserFormData = Omit<User, 'id' | 'ultimoLogin'> & { password?: string }
 
 export type Profile = {
   nome: string

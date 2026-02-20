@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 import { useConfiguracoes } from '@/context/ConfiguracoesContext'
 import { SkeletonCard } from '@/components/Skeleton'
 import type { User, UserFormData, UserRole } from '@/types/configuracoes'
@@ -15,10 +16,14 @@ const ROLES: { value: UserRole; label: string }[] = [
 
 export default function UsuariosPage() {
   const router = useRouter()
+  const { user: currentUser } = useAuth()
   const { users, addUser, updateUser, deleteUser, loading, error } = useConfiguracoes()
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+
+  /** Só quem não tem gerente (é gerente) pode criar novos usuários (funcionários) */
+  const canCreateUser = !currentUser?.gerenteId
 
   const filteredUsers = useMemo(() => {
     if (!searchTerm.trim()) return users
@@ -92,19 +97,25 @@ export default function UsuariosPage() {
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Usuários</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Gerencie os usuários da plataforma.</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {canCreateUser
+                ? 'Gerencie os usuários vinculados ao seu perfil (funcionários). Eles veem as mesmas solicitações e empresas que você.'
+                : 'Usuários vinculados ao seu gerente.'}
+            </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleAddUser}
-          className="inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-5 py-3 text-sm font-semibold shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl hover:shadow-[var(--primary)]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Novo usuário
-        </button>
+        {canCreateUser && (
+          <button
+            type="button"
+            onClick={handleAddUser}
+            className="inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-5 py-3 text-sm font-semibold shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl hover:shadow-[var(--primary)]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Novo usuário
+          </button>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -152,7 +163,7 @@ export default function UsuariosPage() {
           <p className="text-base font-semibold text-gray-700 mb-1">
             {searchTerm ? 'Nenhum usuário encontrado.' : 'Nenhum usuário cadastrado.'}
           </p>
-          {!searchTerm && (
+          {!searchTerm && canCreateUser && (
             <button
               type="button"
               onClick={handleAddUser}
