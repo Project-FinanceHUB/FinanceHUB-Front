@@ -65,7 +65,7 @@ export default function PasswordlessLogin({ email, onEmailChange }: Passwordless
       }, 1000)
     } catch (error: any) {
       console.error('Erro ao enviar código:', error)
-      const errorMessage = error.message || 'Erro ao enviar código. Verifique se o backend está rodando em http://localhost:3001'
+      const errorMessage = error.message || 'Erro ao enviar código. Verifique a conexão com o backend.'
       setErroEmail(errorMessage)
     } finally {
       // Sempre resetar o estado de loading

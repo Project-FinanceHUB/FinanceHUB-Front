@@ -70,13 +70,14 @@ export async function sendAuthCode(email: string): Promise<SendCodeResponse> {
     return response.json()
   } catch (error: any) {
     clearTimeout(timeoutId)
+    const msg = `Backend não está respondendo. Verifique a URL em NEXT_PUBLIC_API_URL (atual: ${API_URL})`
     if (error.name === 'AbortError' || error.name === 'TypeError') {
-      throw new Error('Backend não está respondendo. Verifique se o servidor está rodando em http://localhost:3001')
+      throw new Error(msg)
     }
     if (error.message) {
       throw error
     }
-    throw new Error('Erro de conexão. Verifique se o backend está rodando em http://localhost:3001')
+    throw new Error(`Erro de conexão. URL da API: ${API_URL}`)
   }
 }
 
@@ -121,13 +122,14 @@ export async function verifyCode(email: string, code: string): Promise<VerifyCod
   } catch (error: any) {
     clearTimeout(timeoutId)
     console.error('[Auth] Erro ao verificar código:', error)
+    const msg = `Backend não está respondendo. Verifique a URL em NEXT_PUBLIC_API_URL (atual: ${API_URL})`
     if (error.name === 'AbortError' || error.name === 'TypeError') {
-      throw new Error('Backend não está respondendo. Verifique se o servidor está rodando em http://localhost:3001')
+      throw new Error(msg)
     }
     if (error.message) {
       throw error
     }
-    throw new Error('Erro de conexão. Verifique se o backend está rodando em http://localhost:3001')
+    throw new Error(`Erro de conexão. URL da API: ${API_URL}`)
   }
 }
 
@@ -167,7 +169,7 @@ export async function validateSession(token: string): Promise<ValidateSessionRes
     if (err?.name === 'AbortError' || err?.name === 'TypeError') {
       return {
         valid: false,
-        error: 'Backend indisponível. Verifique se o servidor está rodando em http://localhost:3001',
+        error: `Backend indisponível. URL configurada: ${API_URL}. Defina NEXT_PUBLIC_API_URL na Vercel e faça Redeploy.`,
       }
     }
     return { valid: false, error: err?.message || 'Erro ao validar sessão' }
