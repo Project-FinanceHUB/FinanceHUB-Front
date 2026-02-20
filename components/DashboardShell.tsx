@@ -244,10 +244,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 setIsSolicitacaoModalOpen(true)
               }}
               className={cn(
-                'w-full inline-flex items-center rounded-xl bg-white text-[var(--primary)] font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 relative group',
+                'w-full inline-flex items-center rounded-xl bg-white text-[var(--primary)] font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 relative group min-h-[48px] touch-manipulation',
                 isSidebarCollapsed ? 'md:justify-center md:px-2 md:gap-0 gap-2 px-4 py-3' : 'justify-center gap-2 px-4 py-3.5'
               )}
               title={isSidebarCollapsed ? 'Abrir nova solicitação' : undefined}
+              aria-label="Abrir nova solicitação"
             >
               <Icon name="plus" className="w-5 h-5" />
               {!isSidebarCollapsed && <span>Abrir nova solicitação</span>}

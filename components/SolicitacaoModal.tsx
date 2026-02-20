@@ -43,16 +43,16 @@ export default function SolicitacaoModal({ isOpen, solicitacao, companies, onClo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="solicitacao-modal-title">
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transform transition-all duration-300 scale-100">
+      <div className="relative w-full max-w-3xl max-h-[90vh] min-h-[50vh] md:min-h-0 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transform transition-all duration-300 scale-100">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary)]/10 to-[var(--accent)]/10 flex items-center justify-center">
               <svg className="w-5 h-5 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -60,7 +60,7 @@ export default function SolicitacaoModal({ isOpen, solicitacao, companies, onClo
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 id="solicitacao-modal-title" className="text-xl font-bold text-gray-900">
                 {solicitacao ? 'Editar Solicitação' : 'Nova Solicitação'}
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -71,7 +71,7 @@ export default function SolicitacaoModal({ isOpen, solicitacao, companies, onClo
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200 hover:scale-110"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200 hover:scale-110 touch-manipulation"
             aria-label="Fechar"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -80,7 +80,7 @@ export default function SolicitacaoModal({ isOpen, solicitacao, companies, onClo
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50/30">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 bg-gray-50/30 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           <SolicitacaoForm solicitacao={solicitacao} companies={companies} onSubmit={handleSubmit} onCancel={onClose} isSubmitting={isSubmitting} />
         </div>
       </div>

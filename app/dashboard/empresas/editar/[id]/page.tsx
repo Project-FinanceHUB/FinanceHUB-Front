@@ -38,10 +38,6 @@ export default function EditarEmpresaPage() {
     }
   }, [id, companies, router])
 
-  const handleAddCnpjField = () => {
-    setCnpjs((prev) => [...prev, ''])
-  }
-
   const handleChangeCnpj = (index: number, value: string) => {
     setCnpjs((prev) => prev.map((c, i) => (i === index ? value : c)))
   }
@@ -170,21 +166,9 @@ export default function EditarEmpresaPage() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-semibold text-gray-900">
-                      CNPJs <span className="text-red-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleAddCnpjField}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:text-[var(--accent)] transition-colors px-2.5 py-1 rounded-lg hover:bg-[var(--primary)]/5"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                      </svg>
-                      Adicionar CNPJ
-                    </button>
-                  </div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    CNPJs <span className="text-red-500">*</span>
+                  </label>
 
                   <div className="space-y-2.5">
                     {cnpjs.map((cnpj, index) => (
@@ -214,7 +198,7 @@ export default function EditarEmpresaPage() {
                     ))}
                   </div>
                   <p className="mt-2 text-xs text-gray-500">
-                    Você pode cadastrar múltiplos CNPJs para a mesma empresa. Use apenas números ou o formato com pontuação.
+                    Atualize o(s) CNPJ(s) já cadastrado(s). Use apenas números ou o formato com pontuação.
                   </p>
                   {errors?.cnpjs && (
                     <p className="mt-1.5 text-xs text-red-600 font-medium flex items-center gap-1">

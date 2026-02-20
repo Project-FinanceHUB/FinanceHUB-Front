@@ -710,6 +710,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
+      {/* FAB: abrir nova solicitação no mobile */}
+      <button
+        type="button"
+        onClick={openCreateModal}
+        className="md:hidden fixed bottom-6 right-6 z-30 flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg shadow-[var(--primary)]/30 hover:shadow-xl active:scale-95 transition-all duration-200"
+        aria-label="Abrir nova solicitação"
+      >
+        <Icon name="plus" className="w-7 h-7" />
+      </button>
+
       {/* Modais */}
       <SolicitacaoDetalhesModal
         isOpen={isDetalhesModalOpen}

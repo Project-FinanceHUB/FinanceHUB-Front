@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Solicitacao, SolicitacaoFormData, SolicitacaoStatus } from '@/types/solicitacao'
 import type { Company } from '@/types/company'
 import FileUpload from './FileUpload'
@@ -52,6 +52,11 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
   const currentCompany = companies.find((c) => c.id === selectedCompanyId) || firstCompany
 
   const [errors, setErrors] = useState<Partial<Record<keyof SolicitacaoFormData, string>>>({})
+  const firstErrorRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollToFirstError = useCallback(() => {
+    firstErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [])
 
   // Só preencher/resetar o formulário quando mudar a solicitação editada (por id), não a cada re-render
   const solicitacaoIdRef = useRef<string | null>(null)
@@ -115,6 +120,8 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
         boleto: boletoFile || undefined,
         notaFiscal: notaFiscalFile || undefined,
       })
+    } else {
+      setTimeout(scrollToFirstError, 150)
     }
   }
 
@@ -137,8 +144,15 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
     { value: 'fechado', label: 'Fechado', color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
   ]
 
+  const hasErrors = Object.keys(errors).length > 0
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+      {hasErrors && (
+        <div ref={firstErrorRef} className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800 font-medium" role="alert">
+          Preencha todos os campos obrigatórios (empresa, CNPJ, boleto e nota fiscal) para criar a solicitação.
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
           <label htmlFor="empresa" className="block text-sm font-bold text-gray-900 mb-2">
@@ -231,14 +245,14 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
           Em qual mês do contrato este boleto se refere? <span className="text-red-500">*</span>
         </label>
         <p className="text-xs text-gray-500 mb-3">
-          Seu contrato tem 12 meses. Escolha de <strong>1</strong> (início) a <strong>12</strong> (último mês). Esse valor aparece no gráfico de progresso do contrato.
+          Seu contrato tem 12 meses. Escolha o mês (Janeiro = início, Dezembro = último). Esse valor aparece no gráfico de progresso do contrato.
         </p>
         <div
           role="group"
           aria-labelledby="mes-label"
-          className="grid grid-cols-4 sm:grid-cols-6 gap-2"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
         >
-          {Array.from({ length: 12 }, (_, i) => {
+          {(['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'] as const).map((nome, i) => {
             const n = i + 1
             const selected = (formData.mes ?? 12) === n
             const isFirst = n === 1
@@ -258,9 +272,9 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
                   ${errors.mes ? 'border-red-200' : ''}
                 `}
               >
-                <span className="text-base">{n}</span>
-                {isFirst && <span className="text-[10px] font-normal text-gray-500 mt-0.5">Início</span>}
-                {isLast && <span className="text-[10px] font-normal text-gray-500 mt-0.5">Atual</span>}
+                <span className="text-[13px] leading-tight text-center">{nome}</span>
+                {isFirst && <span className="text-[10px] font-normal text-gray-500 mt-1">Início</span>}
+                {isLast && <span className="text-[10px] font-normal text-gray-500 mt-1">Atual</span>}
               </button>
             )
           })}
@@ -353,12 +367,12 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
         </div>
       ) : null}
 
-      <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+      <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200 sticky bottom-0 left-0 right-0 -mx-6 px-6 py-4 bg-white/95 backdrop-blur-sm z-10 touch-manipulation md:static md:bg-transparent md:py-0 md:-mx-0 md:px-0">
         <LoadingButton
           type="submit"
           isLoading={isSubmitting}
           variant="primary"
-          className="flex-1 py-3 min-h-[44px]"
+          className="flex-1 py-3 min-h-[48px]"
         >
           {solicitacao ? (
             <>
@@ -380,7 +394,7 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 min-h-[44px]"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 min-h-[48px]"
         >
           Cancelar
         </button>

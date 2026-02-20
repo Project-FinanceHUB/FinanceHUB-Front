@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useId } from 'react'
 
 type FileUploadProps = {
   label: string
@@ -24,6 +24,7 @@ export default function FileUpload({
   onChange,
 }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const inputId = useId()
   const [isDragging, setIsDragging] = useState(false)
 
   const handleFile = (selectedFile: File | null) => {
@@ -121,7 +122,8 @@ export default function FileUpload({
 
       <div
         className={cn(
-          'group relative rounded-xl border border-dashed transition-all duration-300 ease-out cursor-pointer overflow-hidden',
+          'group relative rounded-xl border border-dashed transition-all duration-300 ease-out overflow-hidden min-h-[52px]',
+          !file && 'cursor-pointer',
           error
             ? 'border-red-200 bg-red-50/40 shadow-[inset_0_0_0_1px_rgba(248,113,113,0.15)]'
             : isDragging
@@ -130,48 +132,36 @@ export default function FileUpload({
                 ? 'border-emerald-200/70 bg-emerald-50/30 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.08)]'
                 : 'border-gray-200/90 bg-gradient-to-b from-gray-50/50 to-white hover:border-[var(--primary)]/30 hover:from-[var(--primary)]/[0.04] hover:to-white',
         )}
-        onClick={handleClick}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         <input
+          id={inputId}
           ref={fileInputRef}
           type="file"
           accept={accept}
           onChange={handleFileSelect}
-          className="hidden"
-          aria-hidden
+          className="sr-only"
+          aria-label={label}
         />
 
         {!file ? (
-          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 px-4 py-3">
-            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100/80 text-gray-500 group-hover:bg-[var(--primary)]/10 group-hover:text-[var(--primary)] transition-colors duration-300">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <label
+            htmlFor={inputId}
+            className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 px-4 py-4 min-h-[52px] cursor-pointer touch-manipulation"
+          >
+            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100/80 text-gray-500 group-hover:bg-[var(--primary)]/10 group-hover:text-[var(--primary)] transition-colors duration-300">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
             </span>
-            <span className="text-xs text-gray-500 font-medium">
-              Arraste e solte ou
+            <span className="text-sm text-gray-500 font-medium">
+              Toque para anexar ou arraste aqui
             </span>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] text-white px-3 py-2 text-xs font-semibold shadow-sm hover:bg-[var(--accent)] hover:shadow-md active:scale-[0.98] transition-all duration-200"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleClick()
-              }}
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              Anexar arquivo
-            </button>
-          </div>
+          </label>
         ) : (
           <div className="flex items-center gap-3 px-4 py-3">
             <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-100/80 text-emerald-700 shrink-0">
