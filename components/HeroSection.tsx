@@ -342,7 +342,7 @@ export default function HeroSection() {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="group relative bg-white rounded-2xl p-8 border border-gray-100 hover:border-transparent hover:shadow-2xl transition-all duration-500 overflow-hidden text-center"
+                className="group relative bg-white rounded-2xl p-8 border border-gray-100 max-md:shadow-md hover:border-transparent hover:shadow-2xl transition-all duration-500 overflow-hidden text-center"
                 style={{
                   animationDelay: `${index * 100}ms`,
                 }}
