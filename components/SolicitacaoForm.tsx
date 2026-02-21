@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Solicitacao, SolicitacaoFormData, SolicitacaoStatus } from '@/types/solicitacao'
 import type { Company } from '@/types/company'
-import FileUpload from './FileUpload'
+import MultiFileUpload from './MultiFileUpload'
 import LoadingButton from './LoadingButton'
 
 /**
@@ -42,8 +42,7 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
     notaFiscal: solicitacao?.notaFiscal || undefined,
   })
 
-  const [boletoFile, setBoletoFile] = useState<File | null>(null)
-  const [notaFiscalFile, setNotaFiscalFile] = useState<File | null>(null)
+  const [anexos, setAnexos] = useState<File[]>([])
 
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(
     () => companies.find((c) => c.nome === solicitacao?.titulo)?.id || firstCompany?.id || ''
@@ -100,11 +99,8 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
       newErrors.origem = 'CNPJ é obrigatório'
     }
     if (!isEditing) {
-      if (!boletoFile) {
-        newErrors.boleto = 'Boleto é obrigatório'
-      }
-      if (!notaFiscalFile) {
-        newErrors.notaFiscal = 'Nota Fiscal é obrigatória'
+      if (anexos.length < 2) {
+        newErrors.boleto = 'Anexe pelo menos 2 arquivos (boleto e nota fiscal)'
       }
     }
 
@@ -117,8 +113,8 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
     if (validate()) {
       onSubmit({
         ...formData,
-        boleto: boletoFile || undefined,
-        notaFiscal: notaFiscalFile || undefined,
+        boleto: anexos.length > 0 ? anexos[0] : formData.boleto,
+        notaFiscal: anexos.length > 1 ? anexos[1] : formData.notaFiscal,
       })
     } else {
       setTimeout(scrollToFirstError, 150)
@@ -150,7 +146,7 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
     <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
       {hasErrors && (
         <div ref={firstErrorRef} className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800 font-medium" role="alert">
-          Preencha todos os campos obrigatórios (empresa, CNPJ, boleto e nota fiscal) para criar a solicitação.
+          Preencha todos os campos obrigatórios (empresa, CNPJ e anexe pelo menos 2 arquivos: boleto e nota fiscal).
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -241,44 +237,44 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
       </div>
 
       <div className={errors.mes ? 'rounded-xl ring-2 ring-red-200 ring-offset-2 ring-offset-white p-1 -m-1' : ''}>
-        <label id="mes-label" className="block text-sm font-bold text-gray-900 mb-1">
+        <label htmlFor="mes" className="block text-sm font-bold text-gray-900 mb-1">
           Em qual mês do contrato este boleto se refere? <span className="text-red-500">*</span>
         </label>
-        <p className="text-xs text-gray-500 mb-3">
-          Seu contrato tem 12 meses. Escolha o mês (Janeiro = início, Dezembro = último). Esse valor aparece no gráfico de progresso do contrato.
+        <p className="text-xs text-gray-500 mb-2">
+          Seu contrato tem 12 meses. Esse valor aparece no gráfico de progresso do contrato.
         </p>
-        <div
-          role="group"
-          aria-labelledby="mes-label"
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
+        <select
+          id="mes"
+          value={formData.mes ?? 12}
+          onChange={(e) => handleChange('mes', Number(e.target.value))}
+          className={`
+            w-full rounded-xl border-2 px-4 py-3 text-sm outline-none transition-all duration-200 bg-white
+            min-h-[48px] focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)]
+            ${errors.mes
+              ? 'border-red-300 bg-red-50/50 focus:border-red-400'
+              : 'border-gray-200 hover:border-gray-300 focus:border-[var(--primary)]'
+            }
+          `}
         >
-          {(['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'] as const).map((nome, i) => {
-            const n = i + 1
-            const selected = (formData.mes ?? 12) === n
-            const isFirst = n === 1
-            const isLast = n === 12
-            return (
-              <button
-                key={n}
-                type="button"
-                onClick={() => handleChange('mes', n)}
-                className={`
-                  relative flex flex-col items-center justify-center rounded-xl border-2 py-3 px-2 text-sm font-semibold transition-all duration-200
-                  min-h-[52px] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)]
-                  ${selected
-                    ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)] shadow-sm'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-[var(--primary)]/40 hover:bg-gray-50'
-                  }
-                  ${errors.mes ? 'border-red-200' : ''}
-                `}
-              >
-                <span className="text-[13px] leading-tight text-center">{nome}</span>
-                {isFirst && <span className="text-[10px] font-normal text-gray-500 mt-1">Início</span>}
-                {isLast && <span className="text-[10px] font-normal text-gray-500 mt-1">Atual</span>}
-              </button>
-            )
-          })}
-        </div>
+          {[
+            { n: 1, label: 'Janeiro (início)' },
+            { n: 2, label: 'Fevereiro' },
+            { n: 3, label: 'Março' },
+            { n: 4, label: 'Abril' },
+            { n: 5, label: 'Maio' },
+            { n: 6, label: 'Junho' },
+            { n: 7, label: 'Julho' },
+            { n: 8, label: 'Agosto' },
+            { n: 9, label: 'Setembro' },
+            { n: 10, label: 'Outubro' },
+            { n: 11, label: 'Novembro' },
+            { n: 12, label: 'Dezembro (atual)' },
+          ].map(({ n, label }) => (
+            <option key={n} value={n}>
+              {label}
+            </option>
+          ))}
+        </select>
         {errors.mes && (
           <p className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -292,33 +288,19 @@ export default function SolicitacaoForm({ solicitacao, companies, onSubmit, onCa
       <input type="hidden" value={formData.titulo} readOnly />
       <input type="hidden" value={formData.origem} readOnly />
 
-      <FileUpload
-        label="Enviar Boleto"
-        accept=".pdf,.jpg,.jpeg,.png"
-        file={boletoFile}
-        error={errors.boleto}
-        required={!isEditing}
-        onChange={(file) => {
-          setBoletoFile(file)
-          if (errors.boleto) {
-            setErrors((prev) => ({ ...prev, boleto: undefined }))
-          }
-        }}
-      />
-
-      <FileUpload
-        label="Enviar Nota Fiscal"
-        accept=".pdf,.xml,.jpg,.jpeg,.png"
-        file={notaFiscalFile}
-        error={errors.notaFiscal}
-        required={!isEditing}
-        onChange={(file) => {
-          setNotaFiscalFile(file)
-          if (errors.notaFiscal) {
-            setErrors((prev) => ({ ...prev, notaFiscal: undefined }))
-          }
-        }}
-      />
+      {!isEditing && (
+        <MultiFileUpload
+          label="Boleto e Nota Fiscal"
+          files={anexos}
+          error={errors.boleto}
+          required
+          minFiles={2}
+          onChange={(files) => {
+            setAnexos(files)
+            if (errors.boleto) setErrors((prev) => ({ ...prev, boleto: undefined }))
+          }}
+        />
+      )}
 
       <div>
         <label htmlFor="mensagem" className="block text-sm font-bold text-gray-900 mb-2">
